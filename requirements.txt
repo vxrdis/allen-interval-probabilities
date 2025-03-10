@@ -1,0 +1,12 @@
+# Core dependencies
+numpy
+matplotlib
+seaborn
+pandas
+scipy
+
+# Optional (for interactive dashboards and advanced visualisations)
+plotly
+dash
+streamlit
+ffmpeg-python
