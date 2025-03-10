@@ -66,7 +66,7 @@ def allen_relation(x, y, rel):
         A list of sets, where each set represents coinciding endpoints.
 
     Raises:
-        ValueError: If the relation code is not recognized
+        ValueError: If the relation code is not recognised
     """
     lx, rx = l(x), r(x)
     ly, ry = l(y), r(y)
@@ -277,7 +277,7 @@ def superpose(seq1, seq2, voc1, voc2):
     Superpose two sequences of sets (representing endpoint configurations).
 
     This is the core operation that allows computing compositions of Allen relations
-    as described in Allen's original paper and formalized in Alspaugh's tables.
+    as described in Allen's original paper and formalised in Alspaugh's tables.
 
     It merges two endpoint sequences while preserving their relative order constraints,
     which is essential for determining the possible relations that can hold between
