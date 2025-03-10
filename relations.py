@@ -137,30 +137,36 @@ def identify_relation(endpoint_sequence, x, y):
         The relation code (string) if found, None otherwise
     """
     lx, rx = l(x), r(x)
-    ly, ry = l(y)
+    ly, ry = l(y), r(y)  # Fixed: Added r(y) which was missing in the original
 
-    # Define lookup map from endpoint configurations to Alspaugh's relation codes
+    # Convert each endpoint configuration to a canonical form (tuple of frozensets)
+    def to_canonical_form(config):
+        """Convert a list of sets to a tuple of frozensets for reliable comparison"""
+        return tuple(frozenset(s) for s in config)
+
+    # Define lookup map using canonical forms of endpoint configurations
     relation_map = {
-        str([{lx}, {rx}, {ly}, {ry}]): "p",  # Before (precedes)
-        str([{lx}, {rx, ly}, {ry}]): "m",  # Meets
-        str([{lx}, {ly}, {rx}, {ry}]): "o",  # Overlaps
-        str([{lx}, {ly}, {rx, ry}]): "F",  # Finished-by
-        str([{lx}, {ly}, {ry}, {rx}]): "D",  # Contains
-        str([{lx, ly}, {rx}, {ry}]): "s",  # Starts
-        str([{lx, ly}, {rx, ry}]): "e",  # Equals
-        str([{lx, ly}, {ry}, {rx}]): "S",  # Started-by
-        str([{ly}, {lx}, {rx}, {ry}]): "d",  # During
-        str([{ly}, {lx}, {rx, ry}]): "f",  # Finishes
-        str([{ly}, {lx}, {ry}, {rx}]): "O",  # Overlapped-by
-        str([{ly}, {ry, lx}, {rx}]): "M",  # Met-by
-        str([{ly}, {ry}, {lx}, {rx}]): "P",  # After (preceded-by)
+        # Basic relations (following Alspaugh's order)
+        to_canonical_form([{lx}, {rx}, {ly}, {ry}]): "p",  # Before (precedes)
+        to_canonical_form([{lx}, {rx, ly}, {ry}]): "m",  # Meets
+        to_canonical_form([{lx}, {ly}, {rx}, {ry}]): "o",  # Overlaps
+        to_canonical_form([{lx}, {ly}, {rx, ry}]): "F",  # Finished-by
+        to_canonical_form([{lx}, {ly}, {ry}, {rx}]): "D",  # Contains
+        to_canonical_form([{lx, ly}, {rx}, {ry}]): "s",  # Starts
+        to_canonical_form([{lx, ly}, {rx, ry}]): "e",  # Equals
+        to_canonical_form([{lx, ly}, {ry}, {rx}]): "S",  # Started-by
+        to_canonical_form([{ly}, {lx}, {rx}, {ry}]): "d",  # During
+        to_canonical_form([{ly}, {lx}, {rx, ry}]): "f",  # Finishes
+        to_canonical_form([{ly}, {lx}, {ry}, {rx}]): "O",  # Overlapped-by
+        to_canonical_form([{ly}, {ry, lx}, {rx}]): "M",  # Met-by
+        to_canonical_form([{ly}, {ry}, {lx}, {rx}]): "P",  # After (preceded-by)
     }
 
-    # Convert the endpoint sequence to string for lookup
-    sequence_str = str(endpoint_sequence)
+    # Convert input endpoint sequence to canonical form for lookup
+    canonical_input = to_canonical_form(endpoint_sequence)
 
     # Return the relation code or None if not found
-    return relation_map.get(sequence_str)
+    return relation_map.get(canonical_input)
 
 
 def get_relation_name(rel_code):
