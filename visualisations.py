@@ -92,15 +92,13 @@ def plot_relation_distribution(distribution, title, filename=None, show_uniform=
     relations = ALLEN_RELATION_ORDER
     values = [distribution[rel] for rel in relations]
 
-    # Create bar chart with custom colours
-    bars = ax.bar(
-        relations, values, colour=[RELATION_COLOURS[rel] for rel in relations]
-    )
+    # Create bar chart with custom colours - Note: matplotlib requires American spelling for parameters
+    bars = ax.bar(relations, values, color=[RELATION_COLOURS[rel] for rel in relations])
 
     # Add uniform distribution line if requested
     if show_uniform:
         ax.axhline(
-            y=1 / 13, colour="red", linestyle="--", label="Uniform distribution (1/13)"
+            y=1 / 13, color="red", linestyle="--", label="Uniform distribution (1/13)"
         )
         ax.legend(fontsize=12)
 
@@ -116,10 +114,10 @@ def plot_relation_distribution(distribution, title, filename=None, show_uniform=
             i,
             values[i] + 0.005,
             name,
-            ha="centre",
+            ha="center",
             rotation=90,
             fontsize=10,
-            colour="darkblue",
+            color="darkblue",
         )
 
     # Add grid for easier reading
@@ -211,10 +209,10 @@ def plot_composition_heatmap_entropy(matrix, title, filename=None):
                 j + 0.5,
                 i + 0.5,
                 relations_text,
-                ha="centre",
-                va="centre",
+                ha="center",
+                va="center",
                 fontsize=7,
-                colour=text_colour,
+                color=text_colour,
             )
 
     # Add labels and title
@@ -279,10 +277,10 @@ def plot_composition_heatmap_size(matrix, title, filename=None):
                 j + 0.5,
                 i + 0.85,
                 relations_text,
-                ha="centre",
-                va="centre",
+                ha="center",
+                va="center",
                 fontsize=7,
-                colour="black",
+                color="black",
             )
 
     # Add labels and title
@@ -365,10 +363,10 @@ def plot_empirical_composition_heatmap(tally_dict, title, filename=None):
                     j + 0.5,
                     i + 0.5,
                     f"{rel}\n{pct:.1f}%",
-                    ha="centre",
-                    va="centre",
+                    ha="center",
+                    va="center",
                     fontsize=9,
-                    colour="black" if idx < n / 2 else "white",
+                    color="black" if idx < n / 2 else "white",
                 )
 
     # Add labels and title
@@ -412,11 +410,11 @@ def animate_distribution_evolution(pBorn, pDie, max_trials=10000, step_size=500)
     bars = ax.bar(
         relations,
         [0] * len(relations),
-        colour=[RELATION_COLOURS[rel] for rel in relations],
+        color=[RELATION_COLOURS[rel] for rel in relations],
     )
 
     # Add uniform distribution line
-    ax.axhline(y=1 / 13, colour="red", linestyle="--", label="Uniform (1/13)")
+    ax.axhline(y=1 / 13, color="red", linestyle="--", label="Uniform (1/13)")
     ax.legend()
 
     # Set labels and title
@@ -537,10 +535,10 @@ def generate_probability_tables(prob_ranges, trial_count=5000):
                 j + 0.5,
                 i + 0.5,
                 rel,
-                ha="centre",
-                va="centre",
+                ha="center",
+                va="center",
                 fontsize=12,
-                colour="black" if idx < len(ALLEN_RELATION_ORDER) / 2 else "white",
+                color="black" if idx < len(ALLEN_RELATION_ORDER) / 2 else "white",
             )
 
     plt.title("Most Common Allen Relation by Birth/Death Probability", fontsize=16)
