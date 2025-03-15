@@ -5,13 +5,13 @@ Trinity College Dublin
 
 ## Overview
 
-James F. Allen’s Interval Algebra (1983) defines 13 distinct relations between time intervals (e.g., *before*, *meets*, *overlaps*, *during*, etc.), along with a composition table for transitive reasoning. However, **the original framework is deterministic** and does not incorporate **uncertainty**.
+James F. Allen’s Interval Algebra (1983) defines 13 distinct relations between time intervals (e.g. *before*, *meets*, *overlaps*, *during*, etc.), along with a composition table for transitive reasoning. However, **the original framework is deterministic** and does not incorporate **uncertainty**.
 
-This project **extends Allen’s algebra with probabilistic modelling**, using **birth/death automata** to quantify how likely each relation is under different parameters (`p_Born`, `p_Die`). Through large-scale simulations, we observe that different relations arise at different frequencies — **refuting** the naive assumption of a uniform 1/13 distribution. Interactive Dash visualisations allow you to explore how these probabilities converge and how composition outcomes vary across parameter spaces.
+This project **extends Allen’s algebra with probabilistic modelling**, using **birth/death automata** to quantify how likely each relation is under different parameters (`p_Born`, `p_Die`). Through large-scale simulations, we observe that different relations arise at different frequencies — **disproving** the naïve assumption of a uniform 1/13 distribution. Interactive Dash visualisations allow you to explore how these probabilities converge and how composition outcomes vary across parameter spaces.
 
 ### Why This Matters for LLMs
 
-Recent research (e.g., *"Dissociating Language and Thought", 2024*) shows that Large Language Models (LLMs) excel at linguistic tasks but **struggle with rigorous temporal reasoning**. This project addresses that gap by **explicitly modelling** temporal intervals under uncertainty. While LLMs handle textual patterns, they often lack the structured, probabilistic logic seen here. This approach could serve as a foundation for complementary modules or hybrid integrations with LLMs.
+Recent research (e.g. *"Dissociating Language and Thought", 2024*) shows that Large Language Models (LLMs) excel at linguistic tasks but **struggle with rigorous temporal reasoning**. This project addresses that gap by **explicitly modelling** temporal intervals under uncertainty. While LLMs handle textual patterns, they often lack the structured, probabilistic logic seen here. This approach could serve as a foundation for complementary modules or hybrid integrations with LLMs.
 
 ---
 
@@ -25,8 +25,8 @@ Recent research (e.g., *"Dissociating Language and Thought", 2024*) shows that L
    - Simulates how often each of Allen’s 13 relations emerges across thousands of trials.
 
 3. **Statistical Analysis**  
-   - Tools to test uniformity hypotheses (e.g., chi-square).  
-   - Compare empirical frequencies with theoretical distributions (e.g., 1/9 vs. 1/27 classes).
+   - Tools to test uniformity hypotheses (e.g. chi-square).  
+   - Compare empirical frequencies with theoretical distributions (e.g. 1/9 vs 1/27 classes).
 
 4. **Interactive Dashboard**  
    - Launch with `app.py` to explore:
@@ -36,7 +36,7 @@ Recent research (e.g., *"Dissociating Language and Thought", 2024*) shows that L
 
 5. **Comparative Analysis**  
    - Analyse how different (`p`, `q`) settings influence the probability of *before*, *meets*, *overlaps*, etc.  
-   - Explore extreme cases (e.g., `p → 0`, `q → 0`) to see which relations dominate.
+   - Explore extreme cases (e.g. `p → 0`, `q → 0`) to see which relations dominate.
 
 ---
 
@@ -59,19 +59,19 @@ These plots can be auto-generated or explored interactively via the dashboard.
 
 ```
 allen-interval-probabilities/
-├── relations.py              # Core Allen relations (p, m, o, d, s, f, e, etc.)
-├── simulations.py            # Birth/death automata simulation & stats
-├── visualisations.py         # Basic matplotlib charts for distributions
+├── relations.py               # Core Allen relations (p, m, o, d, s, f, e, etc.)
+├── simulations.py             # Birth/death automata simulation & stats
+├── visualisations.py          # Basic matplotlib charts for distributions
 ├── advanced_visualisations.py # Additional or legacy visualisation scripts
-├── animated_distribution.py  # Real-time distribution evolution with Dash
-├── composition_heatmap.py    # Interactive composition table visualisation
-├── parameter_surface.py      # 3D parameter surface (Plotly)
-├── dashboard_integration.py  # Dash callbacks & data flow
-├── dashboard_shell.py        # Base layout structure for the Dash app
-├── app.py                    # Main application entry point
-├── requirements.txt          # Required packages (NumPy, Plotly, etc.)
-├── LICENSE                   # MIT Licence
-└── README.md                 # You're reading it now
+├── animated_distribution.py   # Real-time distribution evolution with Dash
+├── composition_heatmap.py     # Interactive composition table visualisation
+├── parameter_surface.py       # 3D parameter surface (Plotly)
+├── dashboard_integration.py   # Dash callbacks & data flow
+├── dashboard_shell.py         # Base layout structure for the Dash app
+├── app.py                     # Main application entry point
+├── requirements.txt           # Required packages (NumPy, Plotly, etc.)
+├── LICENCE                    # MIT Licence
+└── README.md                  # You’re reading it now
 ```
 
 ---
@@ -137,7 +137,7 @@ python app.py
    Across different (`p_Born`, `p_Die`) settings, some relations (*before*, *meets*, *starts*) appear more frequently (~1/9), while others (*overlaps*, *during*) appear less (~1/27), disproving a 1/13 uniform assumption.
 
 2. **Composition Outcomes**  
-   Composition sets like `(pmosd)` show internal probability variation (e.g., *p, m, s* more likely than *o, d*). Formal tests compare empirical results with theoretical predictions.
+   Composition sets like `(pmosd)` show internal probability variation (e.g. *p, m, s* more likely than *o, d*). Formal tests compare empirical results with theoretical predictions.
 
 3. **Parameter-Driven Patterns**  
    - As `p → 0` and `q → 0`, *before/after* relations dominate (~50%).  
@@ -180,8 +180,4 @@ python app.py
 
 ## Licence
 
-This project is licensed under the MIT Licence. See [LICENSE](./LICENSE) for details.
-
----
-
-*Feedback and contributions are welcome. Please open an issue or contact the repository maintainer.*
+This project is licensed under the MIT Licence. See [LICENCE](./LICENCE) for details.
