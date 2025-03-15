@@ -7,11 +7,11 @@ Trinity College Dublin
 
 James F. Allen’s Interval Algebra (1983) defines 13 distinct relations between time intervals (e.g., *before*, *meets*, *overlaps*, *during*, etc.), along with a composition table for transitive reasoning. However, **the original framework is deterministic** and does not incorporate **uncertainty**.
 
-This project **extends Allen’s algebra with probabilistic modeling**, using **birth/death automata** to quantify how likely each relation is under different parameters (`p_Born`, `p_Die`). Through large-scale simulations, we observe that different relations arise at different frequencies — **refuting** the naive assumption of a uniform 1/13 distribution. Interactive Dash visualizations allow you to explore how these probabilities converge and how composition outcomes vary across parameter spaces.
+This project **extends Allen’s algebra with probabilistic modelling**, using **birth/death automata** to quantify how likely each relation is under different parameters (`p_Born`, `p_Die`). Through large-scale simulations, we observe that different relations arise at different frequencies — **refuting** the naive assumption of a uniform 1/13 distribution. Interactive Dash visualisations allow you to explore how these probabilities converge and how composition outcomes vary across parameter spaces.
 
 ### Why This Matters for LLMs
 
-Recent research (e.g., *"Dissociating Language and Thought", 2024*) shows that Large Language Models (LLMs) excel at linguistic tasks but **struggle with rigorous temporal reasoning**. This project addresses that gap by **explicitly modeling** temporal intervals under uncertainty. While LLMs handle textual patterns, they often lack the structured, probabilistic logic seen here. This approach could serve as a foundation for complementary modules or hybrid integrations with LLMs.
+Recent research (e.g., *"Dissociating Language and Thought", 2024*) shows that Large Language Models (LLMs) excel at linguistic tasks but **struggle with rigorous temporal reasoning**. This project addresses that gap by **explicitly modelling** temporal intervals under uncertainty. While LLMs handle textual patterns, they often lack the structured, probabilistic logic seen here. This approach could serve as a foundation for complementary modules or hybrid integrations with LLMs.
 
 ---
 
@@ -31,16 +31,16 @@ Recent research (e.g., *"Dissociating Language and Thought", 2024*) shows that L
 4. **Interactive Dashboard**  
    - Launch with `app.py` to explore:
      - **Animated Distribution**: Watch relation frequencies converge over time.  
-     - **Composition Heatmap**: Visualize sets like `(pmosd)` from the composition table.  
+     - **Composition Heatmap**: Visualise sets like `(pmosd)` from the composition table.  
      - **Parameter Surface**: 3D plots showing how `p_Born` and `p_Die` affect distribution and entropy.
 
 5. **Comparative Analysis**  
-   - Analyze how different (`p`, `q`) settings influence the probability of *before*, *meets*, *overlaps*, etc.  
+   - Analyse how different (`p`, `q`) settings influence the probability of *before*, *meets*, *overlaps*, etc.  
    - Explore extreme cases (e.g., `p → 0`, `q → 0`) to see which relations dominate.
 
 ---
 
-## Example Visualizations
+## Example Visualisations
 
 1. **Basic Distribution**  
    ![Basic Distribution](./visualisations/basic_distribution.png)
@@ -62,15 +62,15 @@ allen-interval-probabilities/
 ├── relations.py              # Core Allen relations (p, m, o, d, s, f, e, etc.)
 ├── simulations.py            # Birth/death automata simulation & stats
 ├── visualisations.py         # Basic matplotlib charts for distributions
-├── advanced_visualisations.py # Additional or legacy visualization scripts
+├── advanced_visualisations.py # Additional or legacy visualisation scripts
 ├── animated_distribution.py  # Real-time distribution evolution with Dash
-├── composition_heatmap.py    # Interactive composition table visualization
+├── composition_heatmap.py    # Interactive composition table visualisation
 ├── parameter_surface.py      # 3D parameter surface (Plotly)
 ├── dashboard_integration.py  # Dash callbacks & data flow
 ├── dashboard_shell.py        # Base layout structure for the Dash app
 ├── app.py                    # Main application entry point
 ├── requirements.txt          # Required packages (NumPy, Plotly, etc.)
-├── LICENSE                   # MIT License
+├── LICENSE                   # MIT Licence
 └── README.md                 # You're reading it now
 ```
 
@@ -153,7 +153,7 @@ python app.py
 
 - **Localhost**: Run `python app.py`
 - **Render / Heroku**:
-  - Link your GitHub repo.
+  - Link your GitHub repository.
   - Set build command: `pip install -r requirements.txt`
   - Set start command: `python app.py`
   - Define Python version in environment variables if needed.
@@ -162,9 +162,9 @@ python app.py
 
 ## Ethical & Inclusivity Statement
 
-- **No Human Data**: Only simulated intervals used; no personal/sensitive data.
+- **No Human Data**: Only simulated intervals used; no personal or sensitive data involved.
 - **Academic Integrity**: Code and references are properly cited.
-- **Inclusivity**: Dashboard uses color-blind-friendly palettes where possible.
+- **Inclusivity**: Dashboard uses colour-blind-friendly palettes where possible.
 
 ---
 
@@ -174,10 +174,14 @@ python app.py
 - [Thomas Alspaugh’s Allen Algebra](https://thomasalspaugh.org/pub/fnd/allen.html)  
 - **Fernando & Vogel (2019)** — *Prior Probabilities of Allen’s Interval Relations*  
 - *Dissociating Language and Thought* (2024) — *Trends in Cognitive Sciences*  
-- See code docstrings for further references.
+- See code docstrings for additional references.
 
 ---
 
-## License
+## Licence
 
-This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
+This project is licensed under the MIT Licence. See [LICENSE](./LICENSE) for details.
+
+---
+
+*Feedback and contributions are welcome. Please open an issue or contact the repository maintainer.*
