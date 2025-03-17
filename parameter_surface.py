@@ -19,7 +19,7 @@ from dash import dcc, html
 import plotly.graph_objects as go
 
 # Import from our modules
-from relations import ALLEN_RELATION_ORDER, get_relation_name
+from constants import ALLEN_RELATION_ORDER, get_relation_name
 from simulations import simulateRed, arCode, set_random_seed
 import scipy.stats as stats
 

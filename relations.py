@@ -15,6 +15,14 @@ References:
   https://thomasalspaugh.org/pub/fnd/allen.html
 """
 
+# Import constants from the central constants file
+from constants import (
+    ALLEN_RELATION_ORDER,
+    RELATION_NAMES,
+    get_relation_name,
+    get_inverse_relation,
+)
+
 
 def l(x):
     """Generate a left endpoint identifier for interval x."""
@@ -27,26 +35,6 @@ def r(x):
 
 
 # ----- Allen's 13 basic relations as endpoint configurations -----
-
-# Dictionary mapping relation codes to formal names based on Alspaugh's notation
-RELATION_NAMES = {
-    "p": "Before",  # precedes (was 'b')
-    "m": "Meets",
-    "o": "Overlaps",
-    "F": "Finished-by",  # was 'fi'
-    "D": "Contains",  # was 'di'
-    "s": "Starts",
-    "e": "Equals",  # was 'eq'
-    "S": "Started-by",  # was 'si'
-    "d": "During",  # same code
-    "f": "Finishes",  # same code
-    "O": "Overlapped-by",  # was 'oi'
-    "M": "Met-by",  # was 'mi'
-    "P": "After",  # was 'bi'
-}
-
-# Define the specific order of relations according to Alspaugh's table
-ALLEN_RELATION_ORDER = ["p", "m", "o", "F", "D", "s", "e", "S", "d", "f", "O", "M", "P"]
 
 
 def allen_relation(x, y, rel):
@@ -167,43 +155,6 @@ def identify_relation(endpoint_sequence, x, y):
 
     # Return the relation code or None if not found
     return relation_map.get(canonical_input)
-
-
-def get_relation_name(rel_code):
-    """
-    Get the formal name of an Allen relation from its Alspaugh code.
-
-    Args:
-        rel_code: Relation code (p, m, o, etc.)
-
-    Returns:
-        The formal name of the relation or "Unknown relation" if not found
-    """
-    return RELATION_NAMES.get(rel_code, f"Unknown relation '{rel_code}'")
-
-
-def get_inverse_relation(rel_code):
-    """
-    Get the inverse of a relation using Alspaugh's uppercase/lowercase pairing.
-
-    In Alspaugh's notation:
-    - Lowercase relations have uppercase inverses (and vice versa)
-    - 'e' (equals) is self-inverse
-
-    Args:
-        rel_code: Relation code to find inverse for
-
-    Returns:
-        The inverse relation code, or None if not found
-    """
-    if rel_code == "e":  # equals is self-inverse
-        return "e"
-    elif rel_code.islower():  # lowercase -> uppercase inverse
-        return rel_code.upper()
-    elif rel_code.isupper():  # uppercase -> lowercase inverse
-        return rel_code.lower()
-    else:
-        return None
 
 
 def are_inverse_relations(rel1, rel2):

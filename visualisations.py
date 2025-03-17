@@ -32,25 +32,16 @@ from relations import ALLEN_RELATION_ORDER, get_relation_name, compose_relations
 from simulations import arSimulate, simulateRed, tallyProb
 import simulations
 
+# Import constants from the central constants file
+from constants import (
+    ALLEN_RELATION_ORDER,
+    RELATION_NAMES,
+    RELATION_COLOURS,
+    get_relation_name,
+)
+
 # Create output directory if it doesn't exist
 os.makedirs("visualisations", exist_ok=True)
-
-# Define colour schemes
-RELATION_COLOURS = {
-    "p": "#1f77b4",  # blue
-    "m": "#ff7f0e",  # orange
-    "o": "#2ca02c",  # green
-    "F": "#d62728",  # red
-    "D": "#9467bd",  # purple
-    "s": "#8c564b",  # brown
-    "e": "#e377c2",  # pink
-    "S": "#7f7f7f",  # gray
-    "d": "#bcbd22",  # olive
-    "f": "#17becf",  # cyan
-    "O": "#aec7e8",  # light blue
-    "M": "#ffbb78",  # light orange
-    "P": "#98df8a",  # light green
-}
 
 
 def calculate_shannon_entropy(distribution):

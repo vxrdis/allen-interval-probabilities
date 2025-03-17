@@ -20,7 +20,10 @@ from dash import dcc, html
 import plotly.graph_objects as go
 
 # Import from our modules
-from relations import ALLEN_RELATION_ORDER, get_relation_name, compose_relations
+from relations import compose_relations
+
+# Import constants from the central constants file
+from constants import ALLEN_RELATION_ORDER, get_relation_name
 
 
 def create_composition_matrix():
