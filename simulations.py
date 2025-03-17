@@ -20,6 +20,7 @@ from relations import (
     get_relation_name,
     get_inverse_relation,
     ALLEN_RELATION_ORDER,
+    identify_relation,  # Import the identify_relation function
 )
 from shared_utils import normalize_counts
 
@@ -374,7 +375,8 @@ class IntervalSimulator:
         """
         Identify the Allen relation corresponding to a history of state transitions.
 
-        This function maps interval transition histories to Alspaugh's Allen relation codes.
+        This function converts interval transition histories to endpoint sequences
+        and uses identify_relation from relations.py.
 
         Args:
             Hist: History of state transitions
@@ -382,33 +384,58 @@ class IntervalSimulator:
         Returns:
             Allen relation code or None if no match
         """
-        # Map histories to Allen relation codes using Alspaugh's notation
+        # Convert history to endpoint sequence for identify_relation
+        endpoint_sequence = self._history_to_endpoint_sequence(Hist)
+        if endpoint_sequence:
+            # Use intervals 'a' and 'b' for the two intervals in the simulation
+            return identify_relation(endpoint_sequence, "a", "b")
+        return None
+
+    def _history_to_endpoint_sequence(self, Hist):
+        """
+        Convert a state transition history to an endpoint sequence for identify_relation.
+
+        Args:
+            Hist: History of state transitions like [[0, 0], [1, 1], [2, 2]]
+
+        Returns:
+            List of sets representing endpoint configurations or None if mapping not defined
+        """
+        # Map histories to endpoint sequences using Alspaugh's notation
+        # The mapping preserves the original arCode mapping logic but uses identify_relation format
+        from relations import l, r  # Import endpoint identifier functions
+
+        la, ra = l("a"), r("a")  # Endpoints for interval a
+        lb, rb = l("b"), r("b")  # Endpoints for interval b
+
+        # Direct mappings from histories to endpoint configurations
         if Hist == [[0, 0], [1, 1], [2, 2]]:
-            return "e"  # Equal (was 'eq')
+            return [{la, lb}, {ra, rb}]  # Equal (e): la=lb, ra=rb
         elif Hist == [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]]:
-            return "p"  # Before/Precedes (was 'b')
+            return [{la}, {ra}, {lb}, {rb}]  # Before/Precedes (p): la<ra<lb<rb
         elif Hist == [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2]]:
-            return "P"  # After (was 'bi')
+            return [{lb}, {rb}, {la}, {ra}]  # After (P): lb<rb<la<ra
         elif Hist == [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2]]:
-            return "o"  # Overlaps (same code)
+            return [{la}, {lb}, {ra}, {rb}]  # Overlaps (o): la<lb<ra<rb
         elif Hist == [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2]]:
-            return "O"  # Overlapped-by (was 'oi')
+            return [{lb}, {la}, {rb}, {ra}]  # Overlapped-by (O): lb<la<rb<ra
         elif Hist == [[0, 0], [1, 0], [2, 1], [2, 2]]:
-            return "m"  # Meets (same code)
+            return [{la}, {ra, lb}, {rb}]  # Meets (m): la<(ra=lb)<rb
         elif Hist == [[0, 0], [0, 1], [1, 2], [2, 2]]:
-            return "M"  # Met-by (was 'mi')
+            return [{lb}, {rb, la}, {ra}]  # Met-by (M): lb<(rb=la)<ra
         elif Hist == [[0, 0], [0, 1], [1, 1], [2, 1], [2, 2]]:
-            return "d"  # During (same code)
+            return [{lb}, {la}, {ra}, {rb}]  # During (d): lb<la<ra<rb
         elif Hist == [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2]]:
-            return "D"  # Contains (was 'di')
+            return [{la}, {lb}, {rb}, {ra}]  # Contains (D): la<lb<rb<ra
         elif Hist == [[0, 0], [1, 1], [2, 1], [2, 2]]:
-            return "s"  # Starts (same code)
+            return [{la, lb}, {ra}, {rb}]  # Starts (s): la=lb, ra<rb
         elif Hist == [[0, 0], [1, 1], [1, 2], [2, 2]]:
-            return "S"  # Started-by (was 'si')
+            return [{la, lb}, {rb}, {ra}]  # Started-by (S): la=lb, rb<ra
         elif Hist == [[0, 0], [0, 1], [1, 1], [2, 2]]:
-            return "f"  # Finishes (same code)
+            return [{lb}, {la}, {ra, rb}]  # Finishes (f): lb<la, ra=rb
         elif Hist == [[0, 0], [1, 0], [1, 1], [2, 2]]:
-            return "F"  # Finished-by (was 'fi')
+            return [{la}, {lb}, {ra, rb}]  # Finished-by (F): la<lb, ra=rb
+
         return None  # No match
 
     def save_results_to_file(self, filename):
@@ -700,8 +727,17 @@ def updateState(state, pBorn, pDie):
 
 
 def arCode(Hist):
-    """Legacy helper function using utility simulator"""
-    return get_utility_simulator()._get_relation_code(Hist)
+    """
+    Legacy helper function using identify_relation from relations.py
+
+    This preserves backward compatibility by translating histories to endpoint sequences.
+    """
+    # Create a temporary simulator to use its conversion method
+    simulator = get_utility_simulator()
+    endpoint_sequence = simulator._history_to_endpoint_sequence(Hist)
+    if endpoint_sequence:
+        return identify_relation(endpoint_sequence, "a", "b")
+    return None
 
 
 def arInitDic():

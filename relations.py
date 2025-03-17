@@ -20,7 +20,6 @@ from constants import (
     ALLEN_RELATION_ORDER,
     RELATION_NAMES,
     get_relation_name,
-    get_inverse_relation,
 )
 
 
@@ -32,6 +31,45 @@ def l(x):
 def r(x):
     """Generate a right endpoint identifier for interval x."""
     return f"r{x}"
+
+
+# Cache for relation maps to avoid rebuilding on each call to identify_relation()
+_relation_map_cache = {}
+
+
+def to_canonical_form(config):
+    """
+    Convert a list of sets to a tuple of frozensets for reliable comparison.
+
+    Used for canonicalizing endpoint configurations.
+
+    Args:
+        config: A list of sets representing endpoint configurations
+
+    Returns:
+        A tuple of frozen sets (hashable for dictionary keys)
+    """
+    return tuple(frozenset(s) for s in config)
+
+
+def get_inverse_relation(rel_code):
+    """
+    Get the inverse of a relation using Alspaugh's uppercase/lowercase pairing.
+
+    Args:
+        rel_code: Relation code to find inverse for
+
+    Returns:
+        The inverse relation code, or None if not found
+    """
+    if rel_code == "e":  # equals is self-inverse
+        return "e"
+    elif rel_code.islower():  # lowercase -> uppercase inverse
+        return rel_code.upper()
+    elif rel_code.isupper():  # uppercase -> lowercase inverse
+        return rel_code.lower()
+    else:
+        return None
 
 
 # ----- Allen's 13 basic relations as endpoint configurations -----
@@ -124,31 +162,37 @@ def identify_relation(endpoint_sequence, x, y):
     Returns:
         The relation code (string) if found, None otherwise
     """
-    lx, rx = l(x), r(x)
-    ly, ry = l(y), r(y)  # Fixed: Added r(y) which was missing in the original
+    # Create a cache key from the interval identifiers
+    cache_key = (x, y)
 
-    # Convert each endpoint configuration to a canonical form (tuple of frozensets)
-    def to_canonical_form(config):
-        """Convert a list of sets to a tuple of frozensets for reliable comparison"""
-        return tuple(frozenset(s) for s in config)
+    # Try to get the relation map from cache first
+    relation_map = _relation_map_cache.get(cache_key)
 
-    # Define lookup map using canonical forms of endpoint configurations
-    relation_map = {
-        # Basic relations (following Alspaugh's order)
-        to_canonical_form([{lx}, {rx}, {ly}, {ry}]): "p",  # Before (precedes)
-        to_canonical_form([{lx}, {rx, ly}, {ry}]): "m",  # Meets
-        to_canonical_form([{lx}, {ly}, {rx}, {ry}]): "o",  # Overlaps
-        to_canonical_form([{lx}, {ly}, {rx, ry}]): "F",  # Finished-by
-        to_canonical_form([{lx}, {ly}, {ry}, {rx}]): "D",  # Contains
-        to_canonical_form([{lx, ly}, {rx}, {ry}]): "s",  # Starts
-        to_canonical_form([{lx, ly}, {rx, ry}]): "e",  # Equals
-        to_canonical_form([{lx, ly}, {ry}, {rx}]): "S",  # Started-by
-        to_canonical_form([{ly}, {lx}, {rx}, {ry}]): "d",  # During
-        to_canonical_form([{ly}, {lx}, {rx, ry}]): "f",  # Finishes
-        to_canonical_form([{ly}, {lx}, {ry}, {rx}]): "O",  # Overlapped-by
-        to_canonical_form([{ly}, {ry, lx}, {rx}]): "M",  # Met-by
-        to_canonical_form([{ly}, {ry}, {lx}, {rx}]): "P",  # After (preceded-by)
-    }
+    # If not in cache, build the relation map
+    if relation_map is None:
+        lx, rx = l(x), r(x)
+        ly, ry = l(y), r(y)
+
+        # Define lookup map using canonical forms of endpoint configurations
+        relation_map = {
+            # Basic relations (following Alspaugh's order)
+            to_canonical_form([{lx}, {rx}, {ly}, {ry}]): "p",  # Before (precedes)
+            to_canonical_form([{lx}, {rx, ly}, {ry}]): "m",  # Meets
+            to_canonical_form([{lx}, {ly}, {rx}, {ry}]): "o",  # Overlaps
+            to_canonical_form([{lx}, {ly}, {rx, ry}]): "F",  # Finished-by
+            to_canonical_form([{lx}, {ly}, {ry}, {rx}]): "D",  # Contains
+            to_canonical_form([{lx, ly}, {rx}, {ry}]): "s",  # Starts
+            to_canonical_form([{lx, ly}, {rx, ry}]): "e",  # Equals
+            to_canonical_form([{lx, ly}, {ry}, {rx}]): "S",  # Started-by
+            to_canonical_form([{ly}, {lx}, {rx}, {ry}]): "d",  # During
+            to_canonical_form([{ly}, {lx}, {rx, ry}]): "f",  # Finishes
+            to_canonical_form([{ly}, {lx}, {ry}, {rx}]): "O",  # Overlapped-by
+            to_canonical_form([{ly}, {ry, lx}, {rx}]): "M",  # Met-by
+            to_canonical_form([{ly}, {ry}, {lx}, {rx}]): "P",  # After (preceded-by)
+        }
+
+        # Store in cache for future use
+        _relation_map_cache[cache_key] = relation_map
 
     # Convert input endpoint sequence to canonical form for lookup
     canonical_input = to_canonical_form(endpoint_sequence)
