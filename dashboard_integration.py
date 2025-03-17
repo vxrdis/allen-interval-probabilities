@@ -48,6 +48,39 @@ from relations import ALLEN_RELATION_ORDER, get_relation_name
 from simulations import set_random_seed
 
 
+def get_component_by_id(app, component_id):
+    """
+    Utility function to find a component by its ID.
+
+    Args:
+        app: The Dash application instance
+        component_id: The ID of the component to find
+
+    Returns:
+        The component with the specified ID
+    """
+
+    # Search for the component in the layout
+    def find_component(layout):
+        if hasattr(layout, "id") and layout.id == component_id:
+            return layout
+
+        if hasattr(layout, "children") and layout.children:
+            # If children is a list, search through each child
+            if isinstance(layout.children, list):
+                for child in layout.children:
+                    result = find_component(child)
+                    if result:
+                        return result
+            # If children is a single component, search it
+            else:
+                return find_component(layout.children)
+
+        return None
+
+    return find_component(app.layout)
+
+
 def create_integrated_dashboard():
     """
     Create and configure the integrated dashboard application.
@@ -66,111 +99,107 @@ def create_integrated_dashboard():
 
     # Define the integrated layout by replacing placeholders
 
-    # 1. Add simulation controls
-    app.layout.children[1].children[0].children[0].children[1] = html.Div(
-        [
-            # Birth probability slider
-            html.Div(
-                style={"marginBottom": "15px"},
-                children=[
-                    html.Label("Birth Probability (pBorn):"),
-                    dcc.Slider(
-                        id="pborn-slider",
-                        min=0.01,
-                        max=0.5,
-                        step=0.01,
-                        value=0.1,
-                        marks={0.01: "0.01", 0.1: "0.1", 0.25: "0.25", 0.5: "0.5"},
-                        tooltip={"placement": "bottom", "always_visible": True},
-                    ),
-                ],
-            ),
-            # Death probability slider
-            html.Div(
-                style={"marginBottom": "15px"},
-                children=[
-                    html.Label("Death Probability (pDie):"),
-                    dcc.Slider(
-                        id="pdie-slider",
-                        min=0.01,
-                        max=0.5,
-                        step=0.01,
-                        value=0.1,
-                        marks={0.01: "0.01", 0.1: "0.1", 0.25: "0.25", 0.5: "0.5"},
-                        tooltip={"placement": "bottom", "always_visible": True},
-                    ),
-                ],
-            ),
-            # Number of trials slider
-            html.Div(
-                style={"marginBottom": "15px"},
-                children=[
-                    html.Label("Number of Trials:"),
-                    dcc.Slider(
-                        id="trials-slider",
-                        min=500,
-                        max=10000,
-                        step=500,
-                        value=2000,
-                        marks={500: "500", 2000: "2k", 5000: "5k", 10000: "10k"},
-                        tooltip={"placement": "bottom", "always_visible": True},
-                    ),
-                ],
-            ),
-            # Step size for animation
-            html.Div(
-                style={"marginBottom": "20px"},
-                children=[
-                    html.Label("Animation Step Size:"),
-                    dcc.Slider(
-                        id="step-slider",
-                        min=50,
-                        max=1000,
-                        step=50,
-                        value=200,
-                        marks={50: "50", 200: "200", 500: "500", 1000: "1000"},
-                        tooltip={"placement": "bottom", "always_visible": True},
-                    ),
-                ],
-            ),
-            # Run button
-            html.Button(
-                "Run Simulation",
-                id="run-button",
-                style={
-                    "backgroundColor": COLORS["primary"],
-                    "color": "white",
-                    "border": "none",
-                    "padding": "10px 20px",
-                    "borderRadius": "4px",
-                    "width": "100%",
-                    "cursor": "pointer",
-                    "fontWeight": "bold",
-                },
-            ),
-            # Status message area
-            html.Div(
-                id="simulation-status", style={"marginTop": "10px", "minHeight": "60px"}
-            ),
-        ]
-    )
+    # 1. Add simulation controls using ID-based reference
+    simulation_controls = get_component_by_id(app, "simulation-controls")
+    simulation_controls.children = [
+        # Birth probability slider
+        html.Div(
+            style={"marginBottom": "15px"},
+            children=[
+                html.Label("Birth Probability (pBorn):"),
+                dcc.Slider(
+                    id="pborn-slider",
+                    min=0.01,
+                    max=0.5,
+                    step=0.01,
+                    value=0.1,
+                    marks={0.01: "0.01", 0.1: "0.1", 0.25: "0.25", 0.5: "0.5"},
+                    tooltip={"placement": "bottom", "always_visible": True},
+                ),
+            ],
+        ),
+        # Death probability slider
+        html.Div(
+            style={"marginBottom": "15px"},
+            children=[
+                html.Label("Death Probability (pDie):"),
+                dcc.Slider(
+                    id="pdie-slider",
+                    min=0.01,
+                    max=0.5,
+                    step=0.01,
+                    value=0.1,
+                    marks={0.01: "0.01", 0.1: "0.1", 0.25: "0.25", 0.5: "0.5"},
+                    tooltip={"placement": "bottom", "always_visible": True},
+                ),
+            ],
+        ),
+        # Number of trials slider
+        html.Div(
+            style={"marginBottom": "15px"},
+            children=[
+                html.Label("Number of Trials:"),
+                dcc.Slider(
+                    id="trials-slider",
+                    min=500,
+                    max=10000,
+                    step=500,
+                    value=2000,
+                    marks={500: "500", 2000: "2k", 5000: "5k", 10000: "10k"},
+                    tooltip={"placement": "bottom", "always_visible": True},
+                ),
+            ],
+        ),
+        # Step size for animation
+        html.Div(
+            style={"marginBottom": "20px"},
+            children=[
+                html.Label("Animation Step Size:"),
+                dcc.Slider(
+                    id="step-slider",
+                    min=50,
+                    max=1000,
+                    step=50,
+                    value=200,
+                    marks={50: "50", 200: "200", 500: "500", 1000: "1000"},
+                    tooltip={"placement": "bottom", "always_visible": True},
+                ),
+            ],
+        ),
+        # Run button
+        html.Button(
+            "Run Simulation",
+            id="run-button",
+            style={
+                "backgroundColor": COLORS["primary"],
+                "color": "white",
+                "border": "none",
+                "padding": "10px 20px",
+                "borderRadius": "4px",
+                "width": "100%",
+                "cursor": "pointer",
+                "fontWeight": "bold",
+            },
+        ),
+        # Status message area
+        html.Div(
+            id="simulation-status", style={"marginTop": "10px", "minHeight": "60px"}
+        ),
+    ]
 
     # 2. Add visualization-specific controls
-    app.layout.children[1].children[0].children[2].children[1] = html.Div(
-        [
-            # These controls will be dynamically shown/hidden based on active tab
-            html.Div(id="distribution-controls", style={"display": "block"}),
-            html.Div(id="composition-controls", style={"display": "none"}),
-            html.Div(id="surface-controls", style={"display": "none"}),
-        ]
-    )
+    visualization_controls = get_component_by_id(app, "visualization-controls")
+    visualization_controls.children = [
+        # These controls will be dynamically shown/hidden based on active tab
+        html.Div(id="distribution-controls", style={"display": "block"}),
+        html.Div(id="composition-controls", style={"display": "none"}),
+        html.Div(id="surface-controls", style={"display": "none"}),
+    ]
 
     # 3. Replace tab content with actual visualizations
 
     # Distribution evolution tab content
-    distribution_container = (
-        app.layout.children[1].children[1].children[0].children[0].children[0]
-    )
+    distribution_container = get_component_by_id(app, "distribution-container")
     # CHANGE: Use only one set of animation controls, not both
     # We're removing one of the duplicate sets of controls
     distribution_container.children = [
@@ -320,9 +349,7 @@ def create_integrated_dashboard():
     ]
 
     # Composition table tab content
-    composition_container = (
-        app.layout.children[1].children[1].children[0].children[1].children[0]
-    )
+    composition_container = get_component_by_id(app, "composition-container")
     composition_container.children = [
         create_composition_explanation(),
         dcc.Loading(
@@ -333,9 +360,7 @@ def create_integrated_dashboard():
     ]
 
     # Parameter surface tab content
-    surface_container = (
-        app.layout.children[1].children[1].children[0].children[2].children[0]
-    )
+    surface_container = get_component_by_id(app, "surface-container")
     surface_container.children = [
         create_parameter_surface_explanation(),
         # Add a button directly in the surface container - CHANGED ID to make it unique
@@ -392,7 +417,8 @@ def create_integrated_dashboard():
     )
 
     # 5. Add actual controls to each container - FIXED by renaming IDs to avoid duplicates
-    app.layout.children[1].children[0].children[2].children[1].children[0].children = [
+    distribution_controls = get_component_by_id(app, "distribution-controls")
+    distribution_controls.children = [
         html.H4("Animation Controls", style={"marginTop": "0", "marginBottom": "15px"}),
         html.Label("Animation Speed:"),
         dcc.Slider(
@@ -471,13 +497,11 @@ def create_integrated_dashboard():
         ),
     ]
 
-    app.layout.children[1].children[0].children[2].children[1].children[
-        1
-    ].children = create_composition_controls()
+    composition_controls = get_component_by_id(app, "composition-controls")
+    composition_controls.children = create_composition_controls()
 
-    app.layout.children[1].children[0].children[2].children[1].children[
-        2
-    ].children = create_parameter_surface_controls()
+    surface_controls = get_component_by_id(app, "surface-controls")
+    surface_controls.children = create_parameter_surface_controls()
 
     # Define all callbacks for integration
 
@@ -502,7 +526,7 @@ def create_integrated_dashboard():
     )
     def run_simulation(n_clicks, pborn, pdie, trials, step_size):
         """Run Allen relation simulation and prepare animation data"""
-        if n_clicks == 0:
+        if n_clicks is None:  # Better handling for initial state
             return {}, "", 0, {}, 0, ""
 
         # Show running status
@@ -813,14 +837,13 @@ def create_integrated_dashboard():
 
         return comp_data, fig
 
-    # Callback for generating parameter surface
+    # Callback for generating parameter surface - fixed duplicate output issue
     @app.callback(
         [
             Output("surface-data", "data"),
             Output("parameter-surface", "figure"),
             Output("surface-status", "children"),
         ],
-        # Change the input from "surface-button" to "main-surface-button"
         Input("main-surface-button", "n_clicks"),
         [
             State("surface-metric", "value"),
@@ -834,7 +857,7 @@ def create_integrated_dashboard():
         n_clicks, metric, relation, resolution, trials_per_point
     ):
         """Generate and display the parameter surface plot"""
-        if n_clicks == 0:
+        if n_clicks is None:  # Better handling for initial state
             return None, go.Figure(), ""
 
         # Show running status
@@ -888,6 +911,8 @@ def create_integrated_dashboard():
                 ]
             )
 
+            return surface_data, fig, status
+
         except Exception as e:
             # Handle errors gracefully
             status = html.Div(
@@ -906,8 +931,6 @@ def create_integrated_dashboard():
                 ]
             )
             return None, go.Figure(), status
-
-        return surface_data, fig, status
 
     # Add callback for the relation selector visibility
     app.clientside_callback(

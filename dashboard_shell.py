@@ -97,6 +97,7 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
 
     # Define the basic layout
     app.layout = html.Div(
+        id="app-container",
         style={
             "backgroundColor": COLORS["background"],
             "minHeight": "100vh",
@@ -105,6 +106,7 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
         children=[
             # Header section
             html.Div(
+                id="header-section",
                 style=STYLES["header"],
                 children=[
                     html.H1(title, style={"textAlign": "center"}),
@@ -123,6 +125,7 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
             ),
             # Main content area with sidebar and visualization pane
             html.Div(
+                id="main-content-wrapper",
                 style={"display": "flex", "flexDirection": "row", "gap": "20px"},
                 children=[
                     # Side panel for controls and statistics
@@ -139,7 +142,7 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
                                         "Simulation Controls", style={"marginTop": 0}
                                     ),
                                     # Controls will be added by integration function
-                                    html.Div(id="simulation-controls-placeholder"),
+                                    html.Div(id="simulation-controls"),
                                 ],
                             ),
                             # Statistics Panel (placeholder)
@@ -169,7 +172,23 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
                                         "Visualization Options", style={"marginTop": 0}
                                     ),
                                     # Specific controls will be added by integration function
-                                    html.Div(id="visualization-controls-placeholder"),
+                                    html.Div(
+                                        id="visualization-controls",
+                                        children=[
+                                            html.Div(
+                                                id="distribution-controls",
+                                                style={"display": "block"},
+                                            ),
+                                            html.Div(
+                                                id="composition-controls",
+                                                style={"display": "none"},
+                                            ),
+                                            html.Div(
+                                                id="surface-controls",
+                                                style={"display": "none"},
+                                            ),
+                                        ],
+                                    ),
                                 ],
                             ),
                         ],
@@ -192,8 +211,13 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
                                                 style=STYLES["visualization_container"],
                                                 id="distribution-container",
                                                 children=[
-                                                    html.P(
-                                                        "Distribution evolution visualization will appear here."
+                                                    html.Div(
+                                                        id="distribution-section",
+                                                        children=[
+                                                            html.P(
+                                                                "Distribution evolution visualization will appear here."
+                                                            )
+                                                        ],
                                                     )
                                                 ],
                                             )
@@ -208,8 +232,13 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
                                                 style=STYLES["visualization_container"],
                                                 id="composition-container",
                                                 children=[
-                                                    html.P(
-                                                        "Composition table visualization will appear here."
+                                                    html.Div(
+                                                        id="heatmap-section",
+                                                        children=[
+                                                            html.P(
+                                                                "Composition table visualization will appear here."
+                                                            )
+                                                        ],
                                                     )
                                                 ],
                                             )
@@ -224,8 +253,13 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
                                                 style=STYLES["visualization_container"],
                                                 id="surface-container",
                                                 children=[
-                                                    html.P(
-                                                        "Parameter surface visualization will appear here."
+                                                    html.Div(
+                                                        id="parameter-surface-section",
+                                                        children=[
+                                                            html.P(
+                                                                "Parameter surface visualization will appear here."
+                                                            )
+                                                        ],
                                                     )
                                                 ],
                                             )
@@ -239,6 +273,7 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
             ),
             # Storage elements for data (placeholders)
             html.Div(
+                id="storage-container",
                 style={"display": "none"},
                 children=[
                     dcc.Store(id="simulation-data"),  # For simulation results
@@ -248,6 +283,7 @@ def create_dashboard_app(title="Allen's Interval Algebra Explorer"):
             ),
             # Footer
             html.Footer(
+                id="footer",
                 children=[
                     html.P("Allen's Interval Algebra Explorer"),
                     html.P(
