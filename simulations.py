@@ -21,6 +21,7 @@ from relations import (
     get_inverse_relation,
     ALLEN_RELATION_ORDER,
 )
+from shared_utils import normalize_counts
 
 # Global variables
 tally = {}  # Parametrized tally with parameter = str(pBorn) + "," + str(pDie)
@@ -260,10 +261,8 @@ def probDic(dic, trials):
     Returns:
         Dictionary of relation probabilities
     """
-    temp = {}
-    for k in dic:
-        temp[k] = dic[k] / trials if trials > 0 else 0
-    return temp
+    # Use shared normalize_counts function instead of manual calculation
+    return normalize_counts(dic)
 
 
 def print_distribution(dic):

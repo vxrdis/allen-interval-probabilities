@@ -21,9 +21,10 @@ import plotly.graph_objects as go
 
 # Import from our modules
 from relations import compose_relations
-
-# Import constants from the central constants file
 from constants import ALLEN_RELATION_ORDER, get_relation_name
+
+# Import shared utilities
+from shared_utils import calculate_shannon_entropy
 
 
 def create_composition_matrix():
@@ -56,11 +57,12 @@ def create_composition_matrix():
             # Calculate cardinality (number of possible relations in result)
             cardinality_matrix[i, j] = len(result)
 
-            # Calculate entropy (assuming uniform distribution over possible results)
+            # Calculate entropy using shared utility function
             if len(result) > 0:
                 # Uniform distribution over possible outcomes
-                p = 1.0 / len(result)
-                entropy_matrix[i, j] = -len(result) * p * np.log2(p)
+                uniform_p = 1.0 / len(result)
+                probs = [uniform_p] * len(result)
+                entropy_matrix[i, j] = calculate_shannon_entropy(probs)
 
     return {
         "compositions": compositions,
@@ -125,7 +127,10 @@ def generate_interactive_composition_heatmap(comp_data, view_mode="cardinality")
             if result:
                 result_str = ", ".join(result)
                 count = len(result)
-                entropy = -count * (1 / count) * np.log2(1 / count) if count > 0 else 0
+
+                # Use shared utility function for entropy calculation
+                uniform_probs = [1 / count] * count if count > 0 else []
+                entropy = calculate_shannon_entropy(uniform_probs)
 
                 # Add invisible scatter point with custom hover text
                 fig.add_trace(
@@ -157,7 +162,6 @@ def generate_interactive_composition_heatmap(comp_data, view_mode="cardinality")
         width=800,
         margin=dict(t=100, b=50, l=100, r=50),
     )
-
     return fig
 
 
@@ -220,7 +224,6 @@ def create_composition_controls():
             ),
         ]
     )
-
     return controls
 
 
@@ -282,9 +285,7 @@ def create_composition_explanation():
                 ]
             ),
             html.P(
-                [
-                    "Try hovering over different cells to see the exact composition results!"
-                ],
+                "Try hovering over different cells to see the exact composition results!",
                 style={"fontStyle": "italic", "marginTop": "15px"},
             ),
         ],
@@ -295,7 +296,6 @@ def create_composition_explanation():
             "borderRadius": "5px",
         },
     )
-
     return explanation
 
 
@@ -308,10 +308,8 @@ def initialize_composition_heatmap():
     """
     # Compute the composition matrix
     comp_data = create_composition_matrix()
-
     # Generate the default heatmap (cardinality view)
     fig = generate_interactive_composition_heatmap(comp_data, "cardinality")
-
     return comp_data, fig
 
 
@@ -449,7 +447,8 @@ def analysis_of_composition_data(comp_data):
                     ),
                     html.Ul([html.Li(example) for example in most_specific[:3]]),
                     html.P(
-                        "Most ambiguous compositions:", style={"fontWeight": "bold"}
+                        "Most ambiguous compositions:",
+                        style={"fontWeight": "bold"},
                     ),
                     html.Ul(
                         [
@@ -461,7 +460,6 @@ def analysis_of_composition_data(comp_data):
             ),
         ]
     )
-
     return analysis
 
 
@@ -473,10 +471,10 @@ if __name__ == "__main__":
     print("Creating test visualizations...")
     fig_card = generate_interactive_composition_heatmap(comp_data, "cardinality")
     fig_ent = generate_interactive_composition_heatmap(comp_data, "entropy")
-
     # Save HTML visualizations for preview
     import plotly.io as pio
 
     pio.write_html(fig_card, file="composition_cardinality.html", auto_open=True)
     pio.write_html(fig_ent, file="composition_entropy.html", auto_open=False)
+
     print("Test visualizations saved as HTML files.")

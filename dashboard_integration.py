@@ -11,10 +11,6 @@ dashboard for exploring Allen's interval algebra. It combines:
 
 The integration creates a unified interface with shared controls and data stores,
 ensuring changes in one component can propagate to others when appropriate.
-
-Usage:
-    Run this script directly to launch the complete dashboard:
-    python dashboard_integration.py
 """
 
 import time
@@ -44,358 +40,668 @@ from parameter_surface import (
     create_parameter_surface_controls,
     create_parameter_surface_explanation,
 )
-from relations import ALLEN_RELATION_ORDER, get_relation_name
+from constants import ALLEN_RELATION_ORDER, get_relation_name
 from simulations import set_random_seed
-
-
-def get_component_by_id(app, component_id):
-    """
-    Utility function to find a component by its ID.
-
-    Args:
-        app: The Dash application instance
-        component_id: The ID of the component to find
-
-    Returns:
-        The component with the specified ID
-    """
-
-    # Search for the component in the layout
-    def find_component(layout):
-        if hasattr(layout, "id") and layout.id == component_id:
-            return layout
-
-        if hasattr(layout, "children") and layout.children:
-            # If children is a list, search through each child
-            if isinstance(layout.children, list):
-                for child in layout.children:
-                    result = find_component(child)
-                    if result:
-                        return result
-            # If children is a single component, search it
-            else:
-                return find_component(layout.children)
-
-        return None
-
-    return find_component(app.layout)
 
 
 def create_integrated_dashboard():
     """
-    Create and configure the integrated dashboard application.
-
-    This function:
-    1. Initializes the dashboard shell
-    2. Adds visualization-specific components to appropriate containers
-    3. Sets up all necessary callbacks for interactivity
-    4. Configures shared data stores and parameter controls
+    Create and configure the integrated dashboard application with a complete layout structure.
 
     Returns:
         Configured Dash application ready to run
     """
-    # Create the basic dashboard shell
-    app = create_dashboard_app("Allen's Interval Algebra Explorer")
+    # Create a new Dash application with metadata
+    app = dash.Dash(
+        __name__,
+        title="Allen's Interval Algebra Explorer",
+        meta_tags=[
+            {"name": "viewport", "content": "width=device-width, initial-scale=1"}
+        ],
+    )
 
-    # Define the integrated layout by replacing placeholders
+    # Define the complete layout all at once
+    app.layout = html.Div(
+        id="app-container",
+        style={
+            "backgroundColor": COLORS["background"],
+            "minHeight": "100vh",
+            "padding": "20px",
+        },
+        children=[
+            # Header section
+            html.Div(
+                id="header-section",
+                style=STYLES["header"],
+                children=[
+                    html.H1(
+                        "Allen's Interval Algebra Explorer",
+                        style={"textAlign": "center"},
+                    ),
+                    html.P(
+                        """
+                        Explore the empirical probabilities, compositions, and parameter effects in Allen's interval algebra.
+                        Use the controls in the side panel to adjust simulation parameters and analyze the results.
+                        """,
+                        style={
+                            "textAlign": "center",
+                            "maxWidth": "800px",
+                            "margin": "0 auto",
+                        },
+                    ),
+                ],
+            ),
+            # Main content area with sidebar and visualization pane
+            html.Div(
+                id="main-content-wrapper",
+                style={"display": "flex", "flexDirection": "row", "gap": "20px"},
+                children=[
+                    # Side panel for controls and statistics
+                    html.Div(
+                        id="side-panel",
+                        style={"flex": "1", "maxWidth": "300px"},
+                        children=[
+                            # Simulation Controls
+                            html.Div(
+                                id="controls-card",
+                                style=STYLES["card"],
+                                children=[
+                                    html.H3(
+                                        "Simulation Controls", style={"marginTop": 0}
+                                    ),
+                                    html.Div(
+                                        id="simulation-controls",
+                                        children=[
+                                            # Birth probability slider
+                                            html.Div(
+                                                style={"marginBottom": "15px"},
+                                                children=[
+                                                    html.Label(
+                                                        "Birth Probability (pBorn):"
+                                                    ),
+                                                    dcc.Slider(
+                                                        id="pborn-slider",
+                                                        min=0.01,
+                                                        max=0.5,
+                                                        step=0.01,
+                                                        value=0.1,
+                                                        marks={
+                                                            0.01: "0.01",
+                                                            0.1: "0.1",
+                                                            0.25: "0.25",
+                                                            0.5: "0.5",
+                                                        },
+                                                        tooltip={
+                                                            "placement": "bottom",
+                                                            "always_visible": True,
+                                                        },
+                                                    ),
+                                                ],
+                                            ),
+                                            # Death probability slider
+                                            html.Div(
+                                                style={"marginBottom": "15px"},
+                                                children=[
+                                                    html.Label(
+                                                        "Death Probability (pDie):"
+                                                    ),
+                                                    dcc.Slider(
+                                                        id="pdie-slider",
+                                                        min=0.01,
+                                                        max=0.5,
+                                                        step=0.01,
+                                                        value=0.1,
+                                                        marks={
+                                                            0.01: "0.01",
+                                                            0.1: "0.1",
+                                                            0.25: "0.25",
+                                                            0.5: "0.5",
+                                                        },
+                                                        tooltip={
+                                                            "placement": "bottom",
+                                                            "always_visible": True,
+                                                        },
+                                                    ),
+                                                ],
+                                            ),
+                                            # Number of trials slider
+                                            html.Div(
+                                                style={"marginBottom": "15px"},
+                                                children=[
+                                                    html.Label("Number of Trials:"),
+                                                    dcc.Slider(
+                                                        id="trials-slider",
+                                                        min=500,
+                                                        max=10000,
+                                                        step=500,
+                                                        value=2000,
+                                                        marks={
+                                                            500: "500",
+                                                            2000: "2k",
+                                                            5000: "5k",
+                                                            10000: "10k",
+                                                        },
+                                                        tooltip={
+                                                            "placement": "bottom",
+                                                            "always_visible": True,
+                                                        },
+                                                    ),
+                                                ],
+                                            ),
+                                            # Step size for animation
+                                            html.Div(
+                                                style={"marginBottom": "20px"},
+                                                children=[
+                                                    html.Label("Animation Step Size:"),
+                                                    dcc.Slider(
+                                                        id="step-slider",
+                                                        min=50,
+                                                        max=1000,
+                                                        step=50,
+                                                        value=200,
+                                                        marks={
+                                                            50: "50",
+                                                            200: "200",
+                                                            500: "500",
+                                                            1000: "1000",
+                                                        },
+                                                        tooltip={
+                                                            "placement": "bottom",
+                                                            "always_visible": True,
+                                                        },
+                                                    ),
+                                                ],
+                                            ),
+                                            # Run button
+                                            html.Button(
+                                                "Run Simulation",
+                                                id="run-button",
+                                                style={
+                                                    "backgroundColor": COLORS[
+                                                        "primary"
+                                                    ],
+                                                    "color": "white",
+                                                    "border": "none",
+                                                    "padding": "10px 20px",
+                                                    "borderRadius": "4px",
+                                                    "width": "100%",
+                                                    "cursor": "pointer",
+                                                    "fontWeight": "bold",
+                                                },
+                                            ),
+                                            # Status message area
+                                            html.Div(
+                                                id="simulation-status",
+                                                style={
+                                                    "marginTop": "10px",
+                                                    "minHeight": "60px",
+                                                },
+                                            ),
+                                        ],
+                                    ),
+                                ],
+                            ),
+                            # Statistics Panel
+                            html.Div(
+                                id="stats-card",
+                                style=STYLES["card"],
+                                children=[
+                                    html.H3(
+                                        "Statistical Analysis", style={"marginTop": 0}
+                                    ),
+                                    html.Div(
+                                        id="stats-panel",
+                                        children=[
+                                            html.P(
+                                                "Run a simulation to see statistical results."
+                                            )
+                                        ],
+                                    ),
+                                ],
+                            ),
+                            # Visualization-specific controls
+                            html.Div(
+                                id="viz-controls-card",
+                                style=STYLES["card"],
+                                children=[
+                                    html.H3(
+                                        "Visualization Options", style={"marginTop": 0}
+                                    ),
+                                    html.Div(
+                                        id="visualization-controls",
+                                        children=[
+                                            # Distribution-specific controls
+                                            html.Div(
+                                                id="distribution-controls",
+                                                style={"display": "block"},
+                                                children=[
+                                                    html.H4(
+                                                        "Animation Controls",
+                                                        style={
+                                                            "marginTop": "0",
+                                                            "marginBottom": "15px",
+                                                        },
+                                                    ),
+                                                    html.Label("Animation Speed:"),
+                                                    dcc.Slider(
+                                                        id="animation-speed",
+                                                        min=100,
+                                                        max=1000,
+                                                        step=100,
+                                                        value=500,
+                                                        marks={
+                                                            100: "Fast",
+                                                            500: "Medium",
+                                                            1000: "Slow",
+                                                        },
+                                                        tooltip={
+                                                            "placement": "bottom",
+                                                            "always_visible": True,
+                                                        },
+                                                    ),
+                                                    html.Div(
+                                                        [
+                                                            html.Button(
+                                                                "⏪",
+                                                                id="sidebar-restart-animation",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "8px 12px",
+                                                                    "borderRadius": "4px",
+                                                                    "marginRight": "5px",
+                                                                },
+                                                            ),
+                                                            html.Button(
+                                                                "◀",
+                                                                id="sidebar-prev-frame",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "8px 12px",
+                                                                    "borderRadius": "4px",
+                                                                    "marginRight": "5px",
+                                                                },
+                                                            ),
+                                                            html.Button(
+                                                                "Play",
+                                                                id="sidebar-play-button",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "8px 12px",
+                                                                    "borderRadius": "4px",
+                                                                    "marginRight": "5px",
+                                                                    "minWidth": "60px",
+                                                                },
+                                                            ),
+                                                            html.Button(
+                                                                "▶",
+                                                                id="sidebar-next-frame",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "8px 12px",
+                                                                    "borderRadius": "4px",
+                                                                    "marginRight": "5px",
+                                                                },
+                                                            ),
+                                                            html.Button(
+                                                                "⏩",
+                                                                id="sidebar-end-animation",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "8px 12px",
+                                                                    "borderRadius": "4px",
+                                                                },
+                                                            ),
+                                                        ],
+                                                        style={
+                                                            "marginTop": "15px",
+                                                            "display": "flex",
+                                                            "justifyContent": "center",
+                                                        },
+                                                    ),
+                                                ],
+                                            ),
+                                            # Composition-specific controls
+                                            html.Div(
+                                                id="composition-controls",
+                                                style={"display": "none"},
+                                                children=create_composition_controls(),
+                                            ),
+                                            # Surface-specific controls
+                                            html.Div(
+                                                id="surface-controls",
+                                                style={"display": "none"},
+                                                children=create_parameter_surface_controls(),
+                                            ),
+                                        ],
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                    # Main visualization area with tabs
+                    html.Div(
+                        id="main-content",
+                        style={"flex": "3"},
+                        children=[
+                            dcc.Tabs(
+                                id="visualization-tabs",
+                                value="distribution-tab",  # Default selected tab
+                                children=[
+                                    # Distribution Evolution Tab
+                                    dcc.Tab(
+                                        label="Distribution Evolution",
+                                        value="distribution-tab",
+                                        children=[
+                                            html.Div(
+                                                style=STYLES["visualization_container"],
+                                                id="distribution-container",
+                                                children=[
+                                                    # Animation info
+                                                    html.Div(
+                                                        id="animation-info",
+                                                        style={
+                                                            "textAlign": "center",
+                                                            "margin": "0 0 15px 0",
+                                                            "padding": "8px",
+                                                            "backgroundColor": "#ecf0f1",
+                                                            "borderRadius": "4px",
+                                                            "fontWeight": "bold",
+                                                        },
+                                                    ),
+                                                    # Add playback controls here
+                                                    html.Div(
+                                                        style={
+                                                            "display": "flex",
+                                                            "alignItems": "center",
+                                                            "marginBottom": "15px",
+                                                            "justifyContent": "center",
+                                                        },
+                                                        children=[
+                                                            html.Button(
+                                                                "⏪",
+                                                                id="restart-animation",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "10px 15px",
+                                                                    "borderRadius": "4px",
+                                                                    "marginRight": "5px",
+                                                                },
+                                                            ),
+                                                            html.Button(
+                                                                "◀",
+                                                                id="prev-frame",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "10px 15px",
+                                                                    "borderRadius": "4px",
+                                                                    "marginRight": "5px",
+                                                                },
+                                                            ),
+                                                            html.Button(
+                                                                "Play",
+                                                                id="play-button",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "10px 15px",
+                                                                    "borderRadius": "4px",
+                                                                    "marginRight": "5px",
+                                                                    "minWidth": "60px",
+                                                                },
+                                                            ),
+                                                            html.Button(
+                                                                "▶",
+                                                                id="next-frame",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "10px 15px",
+                                                                    "borderRadius": "4px",
+                                                                    "marginRight": "5px",
+                                                                },
+                                                            ),
+                                                            html.Button(
+                                                                "⏩",
+                                                                id="end-animation",
+                                                                style={
+                                                                    "backgroundColor": "#3498db",
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "10px 15px",
+                                                                    "borderRadius": "4px",
+                                                                },
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    # Frame information
+                                                    html.Div(
+                                                        style={
+                                                            "marginBottom": "20px",
+                                                            "padding": "0 10px",
+                                                        },
+                                                        children=[
+                                                            html.Div(
+                                                                style={
+                                                                    "display": "flex",
+                                                                    "justifyContent": "space-between",
+                                                                    "marginBottom": "5px",
+                                                                },
+                                                                children=[
+                                                                    html.Span(
+                                                                        "Animation Frame:",
+                                                                        style={
+                                                                            "fontWeight": "bold"
+                                                                        },
+                                                                    ),
+                                                                    html.Span(
+                                                                        id="frame-info",
+                                                                        children="0/0",
+                                                                    ),
+                                                                ],
+                                                            ),
+                                                            dcc.Slider(
+                                                                id="frame-slider",
+                                                                min=0,
+                                                                max=1,
+                                                                step=1,
+                                                                value=0,
+                                                                marks={},
+                                                                tooltip={
+                                                                    "placement": "bottom",
+                                                                    "always_visible": True,
+                                                                },
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    # Hidden interval component for automated animation
+                                                    dcc.Interval(
+                                                        id="animation-interval",
+                                                        interval=500,
+                                                        disabled=True,
+                                                    ),
+                                                    # Distribution chart
+                                                    dcc.Loading(
+                                                        id="loading-distribution",
+                                                        type="circle",
+                                                        children=[
+                                                            dcc.Graph(
+                                                                id="distribution-graph"
+                                                            )
+                                                        ],
+                                                    ),
+                                                    # Explanation panel
+                                                    html.Div(
+                                                        children=[
+                                                            html.H4(
+                                                                "About Allen Relation Evolution"
+                                                            ),
+                                                            html.P(
+                                                                [
+                                                                    "This animation shows how the distribution of Allen interval relations evolves ",
+                                                                    "as simulation trials increase. The ",
+                                                                    html.Span(
+                                                                        "red dashed line",
+                                                                        style={
+                                                                            "color": "red"
+                                                                        },
+                                                                    ),
+                                                                    " represents the uniform distribution (1/13 ≈ 0.077) for reference.",
+                                                                ]
+                                                            ),
+                                                            html.P(
+                                                                [
+                                                                    "Use the animation controls to explore how the distribution changes over time. ",
+                                                                    "The statistics panel shows detailed analysis of the current frame.",
+                                                                ]
+                                                            ),
+                                                        ],
+                                                        style={
+                                                            "margin": "15px 0",
+                                                            "padding": "15px",
+                                                            "backgroundColor": "#f8f8f8",
+                                                            "borderRadius": "5px",
+                                                        },
+                                                    ),
+                                                ],
+                                            )
+                                        ],
+                                    ),
+                                    # Composition Table Tab
+                                    dcc.Tab(
+                                        label="Composition Table",
+                                        value="composition-tab",
+                                        children=[
+                                            html.Div(
+                                                style=STYLES["visualization_container"],
+                                                id="composition-container",
+                                                children=[
+                                                    create_composition_explanation(),
+                                                    dcc.Loading(
+                                                        id="loading-composition",
+                                                        type="circle",
+                                                        children=[
+                                                            dcc.Graph(
+                                                                id="composition-heatmap"
+                                                            )
+                                                        ],
+                                                    ),
+                                                ],
+                                            )
+                                        ],
+                                    ),
+                                    # Parameter Surface Tab
+                                    dcc.Tab(
+                                        label="Parameter Surface",
+                                        value="surface-tab",
+                                        children=[
+                                            html.Div(
+                                                style=STYLES["visualization_container"],
+                                                id="surface-container",
+                                                children=[
+                                                    create_parameter_surface_explanation(),
+                                                    # Generate surface button
+                                                    html.Div(
+                                                        [
+                                                            html.Button(
+                                                                "Generate Surface",
+                                                                id="main-surface-button",
+                                                                style={
+                                                                    "backgroundColor": COLORS[
+                                                                        "primary"
+                                                                    ],
+                                                                    "color": "white",
+                                                                    "border": "none",
+                                                                    "padding": "10px 20px",
+                                                                    "borderRadius": "4px",
+                                                                    "fontSize": "16px",
+                                                                    "width": "200px",
+                                                                    "cursor": "pointer",
+                                                                    "margin": "10px auto 20px auto",
+                                                                    "display": "block",
+                                                                },
+                                                            ),
+                                                        ]
+                                                    ),
+                                                    # Status display for surface generation
+                                                    html.Div(
+                                                        id="surface-status",
+                                                        style={
+                                                            "margin": "10px 0",
+                                                            "textAlign": "center",
+                                                        },
+                                                    ),
+                                                    # Surface visualization
+                                                    dcc.Loading(
+                                                        id="loading-surface",
+                                                        type="circle",
+                                                        children=[
+                                                            dcc.Graph(
+                                                                id="parameter-surface"
+                                                            )
+                                                        ],
+                                                    ),
+                                                    # Hidden relation selector container (shown conditionally)
+                                                    html.Div(
+                                                        id="relation-selector-container",
+                                                        style={"display": "none"},
+                                                    ),
+                                                ],
+                                            )
+                                        ],
+                                    ),
+                                ],
+                            )
+                        ],
+                    ),
+                ],
+            ),
+            # Storage elements for data
+            html.Div(
+                id="storage-container",
+                style={"display": "none"},
+                children=[
+                    dcc.Store(id="simulation-data"),  # For simulation results
+                    dcc.Store(id="composition-data"),  # For composition matrix data
+                    dcc.Store(id="surface-data"),  # For parameter surface data
+                ],
+            ),
+            # Footer
+            html.Footer(
+                id="footer",
+                children=[
+                    html.P("Allen's Interval Algebra Explorer"),
+                    html.P(
+                        "Based on James F. Allen's 1983 paper and Thomas Alspaugh's notation"
+                    ),
+                ],
+                style={
+                    "textAlign": "center",
+                    "padding": "20px",
+                    "marginTop": "20px",
+                    "borderTop": f'1px solid {COLORS["light"]}',
+                    "color": "#7f8c8d",
+                },
+            ),
+        ],
+    )
 
-    # 1. Add simulation controls using ID-based reference
-    simulation_controls = get_component_by_id(app, "simulation-controls")
-    simulation_controls.children = [
-        # Birth probability slider
-        html.Div(
-            style={"marginBottom": "15px"},
-            children=[
-                html.Label("Birth Probability (pBorn):"),
-                dcc.Slider(
-                    id="pborn-slider",
-                    min=0.01,
-                    max=0.5,
-                    step=0.01,
-                    value=0.1,
-                    marks={0.01: "0.01", 0.1: "0.1", 0.25: "0.25", 0.5: "0.5"},
-                    tooltip={"placement": "bottom", "always_visible": True},
-                ),
-            ],
-        ),
-        # Death probability slider
-        html.Div(
-            style={"marginBottom": "15px"},
-            children=[
-                html.Label("Death Probability (pDie):"),
-                dcc.Slider(
-                    id="pdie-slider",
-                    min=0.01,
-                    max=0.5,
-                    step=0.01,
-                    value=0.1,
-                    marks={0.01: "0.01", 0.1: "0.1", 0.25: "0.25", 0.5: "0.5"},
-                    tooltip={"placement": "bottom", "always_visible": True},
-                ),
-            ],
-        ),
-        # Number of trials slider
-        html.Div(
-            style={"marginBottom": "15px"},
-            children=[
-                html.Label("Number of Trials:"),
-                dcc.Slider(
-                    id="trials-slider",
-                    min=500,
-                    max=10000,
-                    step=500,
-                    value=2000,
-                    marks={500: "500", 2000: "2k", 5000: "5k", 10000: "10k"},
-                    tooltip={"placement": "bottom", "always_visible": True},
-                ),
-            ],
-        ),
-        # Step size for animation
-        html.Div(
-            style={"marginBottom": "20px"},
-            children=[
-                html.Label("Animation Step Size:"),
-                dcc.Slider(
-                    id="step-slider",
-                    min=50,
-                    max=1000,
-                    step=50,
-                    value=200,
-                    marks={50: "50", 200: "200", 500: "500", 1000: "1000"},
-                    tooltip={"placement": "bottom", "always_visible": True},
-                ),
-            ],
-        ),
-        # Run button
-        html.Button(
-            "Run Simulation",
-            id="run-button",
-            style={
-                "backgroundColor": COLORS["primary"],
-                "color": "white",
-                "border": "none",
-                "padding": "10px 20px",
-                "borderRadius": "4px",
-                "width": "100%",
-                "cursor": "pointer",
-                "fontWeight": "bold",
-            },
-        ),
-        # Status message area
-        html.Div(
-            id="simulation-status", style={"marginTop": "10px", "minHeight": "60px"}
-        ),
-    ]
-
-    # 2. Add visualization-specific controls
-    visualization_controls = get_component_by_id(app, "visualization-controls")
-    visualization_controls.children = [
-        # These controls will be dynamically shown/hidden based on active tab
-        html.Div(id="distribution-controls", style={"display": "block"}),
-        html.Div(id="composition-controls", style={"display": "none"}),
-        html.Div(id="surface-controls", style={"display": "none"}),
-    ]
-
-    # 3. Replace tab content with actual visualizations
-
-    # Distribution evolution tab content
-    distribution_container = get_component_by_id(app, "distribution-container")
-    # CHANGE: Use only one set of animation controls, not both
-    # We're removing one of the duplicate sets of controls
-    distribution_container.children = [
-        # Animation info
-        html.Div(
-            id="animation-info",
-            style={
-                "textAlign": "center",
-                "margin": "0 0 15px 0",
-                "padding": "8px",
-                "backgroundColor": "#ecf0f1",
-                "borderRadius": "4px",
-                "fontWeight": "bold",
-            },
-        ),
-        # Add playback controls here
-        html.Div(
-            style={
-                "display": "flex",
-                "alignItems": "center",
-                "marginBottom": "15px",
-                "justifyContent": "center",
-            },
-            children=[
-                html.Button(
-                    "⏪",
-                    id="restart-animation",
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "10px 15px",
-                        "borderRadius": "4px",
-                        "marginRight": "5px",
-                    },
-                ),
-                html.Button(
-                    "◀",
-                    id="prev-frame",
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "10px 15px",
-                        "borderRadius": "4px",
-                        "marginRight": "5px",
-                    },
-                ),
-                html.Button(
-                    "Play",
-                    id="play-button",
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "10px 15px",
-                        "borderRadius": "4px",
-                        "marginRight": "5px",
-                        "minWidth": "60px",
-                    },
-                ),
-                html.Button(
-                    "▶",
-                    id="next-frame",
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "10px 15px",
-                        "borderRadius": "4px",
-                        "marginRight": "5px",
-                    },
-                ),
-                html.Button(
-                    "⏩",
-                    id="end-animation",
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "10px 15px",
-                        "borderRadius": "4px",
-                    },
-                ),
-            ],
-        ),
-        # Frame information
-        html.Div(
-            style={"marginBottom": "20px", "padding": "0 10px"},
-            children=[
-                html.Div(
-                    style={
-                        "display": "flex",
-                        "justifyContent": "space-between",
-                        "marginBottom": "5px",
-                    },
-                    children=[
-                        html.Span("Animation Frame:", style={"fontWeight": "bold"}),
-                        html.Span(id="frame-info", children="0/0"),
-                    ],
-                ),
-                dcc.Slider(
-                    id="frame-slider",
-                    min=0,
-                    max=1,
-                    step=1,
-                    value=0,
-                    marks={},
-                    tooltip={"placement": "bottom", "always_visible": True},
-                ),
-            ],
-        ),
-        # Hidden interval component for automated animation
-        dcc.Interval(id="animation-interval", interval=500, disabled=True),
-        # Distribution chart
-        dcc.Loading(
-            id="loading-distribution",
-            type="circle",
-            children=[dcc.Graph(id="distribution-graph")],
-        ),
-        # Explanation panel
-        html.Div(
-            children=[
-                html.H4("About Allen Relation Evolution"),
-                html.P(
-                    [
-                        "This animation shows how the distribution of Allen interval relations evolves ",
-                        "as simulation trials increase. The ",
-                        html.Span("red dashed line", style={"color": "red"}),
-                        " represents the uniform distribution (1/13 ≈ 0.077) for reference.",
-                    ]
-                ),
-                html.P(
-                    [
-                        "Use the animation controls to explore how the distribution changes over time. ",
-                        "The statistics panel shows detailed analysis of the current frame.",
-                    ]
-                ),
-            ],
-            style={
-                "margin": "15px 0",
-                "padding": "15px",
-                "backgroundColor": "#f8f8f8",
-                "borderRadius": "5px",
-            },
-        ),
-    ]
-
-    # Composition table tab content
-    composition_container = get_component_by_id(app, "composition-container")
-    composition_container.children = [
-        create_composition_explanation(),
-        dcc.Loading(
-            id="loading-composition",
-            type="circle",
-            children=[dcc.Graph(id="composition-heatmap")],
-        ),
-    ]
-
-    # Parameter surface tab content
-    surface_container = get_component_by_id(app, "surface-container")
-    surface_container.children = [
-        create_parameter_surface_explanation(),
-        # Add a button directly in the surface container - CHANGED ID to make it unique
-        html.Div(
-            [
-                html.Button(
-                    "Generate Surface",
-                    id="main-surface-button",  # Changed from "surface-button" to "main-surface-button"
-                    style={
-                        "backgroundColor": COLORS["primary"],
-                        "color": "white",
-                        "border": "none",
-                        "padding": "10px 20px",
-                        "borderRadius": "4px",
-                        "fontSize": "16px",
-                        "width": "200px",
-                        "cursor": "pointer",
-                        "margin": "10px auto 20px auto",
-                        "display": "block",
-                    },
-                ),
-            ]
-        ),
-        # Status display for surface generation
-        html.Div(
-            id="surface-status", style={"margin": "10px 0", "textAlign": "center"}
-        ),
-        dcc.Loading(
-            id="loading-surface",
-            type="circle",
-            children=[dcc.Graph(id="parameter-surface")],
-        ),
-    ]
-
-    # 4. Add client-side callback to toggle controls based on active tab
+    # Add client-side callback to toggle controls based on active tab
     app.clientside_callback(
         """
         function(active_tab) {
@@ -415,95 +721,6 @@ def create_integrated_dashboard():
         ],
         Input("visualization-tabs", "value"),
     )
-
-    # 5. Add actual controls to each container - FIXED by renaming IDs to avoid duplicates
-    distribution_controls = get_component_by_id(app, "distribution-controls")
-    distribution_controls.children = [
-        html.H4("Animation Controls", style={"marginTop": "0", "marginBottom": "15px"}),
-        html.Label("Animation Speed:"),
-        dcc.Slider(
-            id="animation-speed",
-            min=100,
-            max=1000,
-            step=100,
-            value=500,
-            marks={100: "Fast", 500: "Medium", 1000: "Slow"},
-            tooltip={"placement": "bottom", "always_visible": True},
-        ),
-        html.Div(
-            [
-                html.Button(
-                    "⏪",
-                    id="sidebar-restart-animation",  # CHANGED: renamed ID
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "8px 12px",
-                        "borderRadius": "4px",
-                        "marginRight": "5px",
-                    },
-                ),
-                html.Button(
-                    "◀",
-                    id="sidebar-prev-frame",  # CHANGED: renamed ID
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "8px 12px",
-                        "borderRadius": "4px",
-                        "marginRight": "5px",
-                    },
-                ),
-                html.Button(
-                    "Play",
-                    id="sidebar-play-button",  # CHANGED: renamed ID
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "8px 12px",
-                        "borderRadius": "4px",
-                        "marginRight": "5px",
-                        "minWidth": "60px",
-                    },
-                ),
-                html.Button(
-                    "▶",
-                    id="sidebar-next-frame",  # CHANGED: renamed ID
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "8px 12px",
-                        "borderRadius": "4px",
-                        "marginRight": "5px",
-                    },
-                ),
-                html.Button(
-                    "⏩",
-                    id="sidebar-end-animation",  # CHANGED: renamed ID
-                    style={
-                        "backgroundColor": "#3498db",
-                        "color": "white",
-                        "border": "none",
-                        "padding": "8px 12px",
-                        "borderRadius": "4px",
-                    },
-                ),
-            ],
-            style={"marginTop": "15px", "display": "flex", "justifyContent": "center"},
-        ),
-    ]
-
-    composition_controls = get_component_by_id(app, "composition-controls")
-    composition_controls.children = create_composition_controls()
-
-    surface_controls = get_component_by_id(app, "surface-controls")
-    surface_controls.children = create_parameter_surface_controls()
-
-    # Define all callbacks for integration
 
     # Callback to run simulation and update animation data - adding allow_duplicate=True for frame-slider.value
     @app.callback(

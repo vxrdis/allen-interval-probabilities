@@ -23,6 +23,9 @@ from constants import ALLEN_RELATION_ORDER, get_relation_name
 from simulations import simulateRed, arCode, set_random_seed
 import scipy.stats as stats
 
+# Import shared utilities
+from shared_utils import calculate_shannon_entropy, normalize_counts
+
 
 def generate_parameter_surface_data(
     p_values, selected_relation=None, trials_per_point=500
@@ -79,10 +82,7 @@ def generate_parameter_surface_data(
             total_count = sum(counts.values())
             if total_count > 0:
                 # Calculate probabilities for all relations
-                probs = {
-                    rel: counts.get(rel, 0) / total_count
-                    for rel in ALLEN_RELATION_ORDER
-                }
+                probs = normalize_counts(counts)
 
                 # Track probability of the selected relation
                 probability_grid[i, j] = probs[selected_relation]
@@ -95,12 +95,7 @@ def generate_parameter_surface_data(
 
                 # Calculate entropy of the distribution
                 prob_values = list(probs.values())
-                non_zero_probs = [p for p in prob_values if p > 0]
-                entropy = (
-                    -sum(p * np.log2(p) for p in non_zero_probs)
-                    if non_zero_probs
-                    else 0
-                )
+                entropy = calculate_shannon_entropy(prob_values)
                 entropy_grid[i, j] = entropy
 
                 # Handle case where not enough data for chi-square test

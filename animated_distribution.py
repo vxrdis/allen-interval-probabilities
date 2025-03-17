@@ -19,9 +19,14 @@ import plotly.graph_objects as go
 # Import from our modules
 from relations import ALLEN_RELATION_ORDER, get_relation_name
 from simulations import simulateRed, arCode, set_random_seed
-
-# Import constants from the central constants file
 from constants import ALLEN_RELATION_ORDER, RELATION_COLOURS, get_relation_name
+
+# Import shared utilities
+from shared_utils import (
+    calculate_shannon_entropy,
+    normalize_counts,
+    uniform_distribution_value,
+)
 
 
 def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
@@ -49,6 +54,7 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
     # Run simulation in steps
     while total_trials < max_trials:
         step_start_time = time.time()
+
         # Determine number of trials for this step
         current_step = min(step_size, max_trials - total_trials)
 
@@ -63,35 +69,31 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
 
         total_trials += current_step
 
-        # Calculate probabilities and statistical metrics
-        total_count = sum(counts.values())
-        probabilities = {
-            rel: counts[rel] / total_count if total_count > 0 else 0
-            for rel in ALLEN_RELATION_ORDER
-        }
+        # Calculate probabilities using normalize_counts utility
+        probabilities = normalize_counts(counts)
 
         # Calculate statistical metrics
-        expected = [total_count / len(ALLEN_RELATION_ORDER)] * len(ALLEN_RELATION_ORDER)
+        expected = [sum(counts.values()) / len(ALLEN_RELATION_ORDER)] * len(
+            ALLEN_RELATION_ORDER
+        )
         observed = [counts[rel] for rel in ALLEN_RELATION_ORDER]
 
         # Chi-square test (handle case where we don't have enough data)
-        if total_count > 0 and all(e > 0 for e in expected):
+        if sum(counts.values()) > 0 and all(e > 0 for e in expected):
             chi2, p_val = stats.chisquare(observed, expected)
         else:
             chi2, p_val = 0, 1.0
 
-        # Calculate entropy and other distribution properties
+        # Calculate entropy using shared utility
         probs_list = [probabilities[rel] for rel in ALLEN_RELATION_ORDER]
-        non_zero_probs = [p for p in probs_list if p > 0]
-        entropy_val = (
-            -sum(p * np.log2(p) for p in non_zero_probs) if non_zero_probs else 0
-        )
+        entropy_val = calculate_shannon_entropy(probs_list)
 
         most_common_rel = (
             max(probabilities.items(), key=lambda x: x[1])
             if probabilities
             else (None, 0)
         )
+
         least_common_rel = (
             min(probabilities.items(), key=lambda x: x[1])
             if probabilities
@@ -157,7 +159,7 @@ def create_distribution_chart(simulation_data, frame_idx=None):
                     y=0.5,
                     showarrow=False,
                     font=dict(size=16),
-                )
+                ),
             ],
         )
         return fig
@@ -184,9 +186,7 @@ def create_distribution_chart(simulation_data, frame_idx=None):
             hovertemplate="<b>%{x}: %{text}</b><br>"
             + "Probability: %{y:.4f}<br>"
             + "Count: %{customdata}<extra></extra>",
-            customdata=[
-                frame["counts"][rel] for rel in ALLEN_RELATION_ORDER
-            ],  # Add count data for hover
+            customdata=[frame["counts"][rel] for rel in ALLEN_RELATION_ORDER],
         )
     )
 
@@ -194,7 +194,8 @@ def create_distribution_chart(simulation_data, frame_idx=None):
     fig.add_trace(
         go.Scatter(
             x=ALLEN_RELATION_ORDER,
-            y=[1 / 13] * len(ALLEN_RELATION_ORDER),
+            y=[uniform_distribution_value(len(ALLEN_RELATION_ORDER))]
+            * len(ALLEN_RELATION_ORDER),
             mode="lines",
             name="Uniform Distribution (1/13)",
             line=dict(color="red", dash="dash"),
@@ -232,7 +233,7 @@ def create_distribution_chart(simulation_data, frame_idx=None):
                 bordercolor="#333",
                 borderwidth=1,
                 borderpad=4,
-            )
+            ),
         ],
     )
 
@@ -240,7 +241,6 @@ def create_distribution_chart(simulation_data, frame_idx=None):
     if "most_common" in frame and frame["most_common"][0]:
         most_common_rel = frame["most_common"][0]
         most_common_idx = ALLEN_RELATION_ORDER.index(most_common_rel)
-
         fig.add_shape(
             type="rect",
             x0=most_common_idx - 0.4,
@@ -439,7 +439,6 @@ def create_distribution_animation_controls():
             },
         ),
     ]
-
     return controls
 
 
@@ -472,7 +471,6 @@ def get_statistical_info(frame_idx, simulation_data):
     chi2 = frame["chi2"] if "chi2" in frame else 0
     p_value = frame["p_value"] if "p_value" in frame else 1.0
     entropy = frame.get("entropy")
-
     if entropy is None:  # Calculate entropy if not precomputed
         probs = [frame["probabilities"][rel] for rel in ALLEN_RELATION_ORDER]
         non_zero_probs = [p for p in probs if p > 0]
@@ -612,7 +610,12 @@ def get_statistical_info(frame_idx, simulation_data):
                             "borderRadius": "4px",
                         },
                     ),
-                ]
+                ],
+                style={
+                    "padding": "10px",
+                    "backgroundColor": "#f0faf5",
+                    "borderRadius": "4px",
+                },
             )
         ]
     )
@@ -626,7 +629,6 @@ if __name__ == "__main__":
 
     print("Creating test visualization...")
     fig = create_distribution_chart(data)
-
     # If executed as a script, save the figure as HTML for preview
     import plotly.io as pio
 

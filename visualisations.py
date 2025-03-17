@@ -21,18 +21,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import seaborn as sns
-from scipy.stats import entropy
 import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 import os
 import time
 
 # Import from our modules
-from relations import ALLEN_RELATION_ORDER, get_relation_name, compose_relations
+from relations import compose_relations
 from simulations import arSimulate, simulateRed, tallyProb
 import simulations
-
-# Import constants from the central constants file
 from constants import (
     ALLEN_RELATION_ORDER,
     RELATION_NAMES,
@@ -40,27 +37,15 @@ from constants import (
     get_relation_name,
 )
 
+# Import shared utilities
+from shared_utils import (
+    calculate_shannon_entropy,
+    normalize_counts,
+    uniform_distribution_value,
+)
+
 # Create output directory if it doesn't exist
 os.makedirs("visualisations", exist_ok=True)
-
-
-def calculate_shannon_entropy(distribution):
-    """
-    Calculate Shannon entropy of a probability distribution.
-
-    Args:
-        distribution: List of probabilities
-
-    Returns:
-        Entropy value (higher means more uncertainty)
-    """
-    # Make sure the distribution is normalised and contains no zeros
-    distribution = np.array(distribution)
-    distribution = distribution[distribution > 0]
-    if len(distribution) == 0:
-        return 0
-    distribution = distribution / np.sum(distribution)
-    return entropy(distribution, base=2)
 
 
 def plot_relation_distribution(distribution, title, filename=None, show_uniform=True):
@@ -135,11 +120,9 @@ def create_composition_matrix():
     """
     n = len(ALLEN_RELATION_ORDER)
     matrix = np.empty((n, n), dtype=object)
-
     for i, rel1 in enumerate(ALLEN_RELATION_ORDER):
         for j, rel2 in enumerate(ALLEN_RELATION_ORDER):
             matrix[i, j] = compose_relations(rel1, rel2)
-
     return matrix
 
 
@@ -156,7 +139,6 @@ def plot_composition_heatmap_entropy(matrix, title, filename=None):
         The figure and axes objects
     """
     n = len(ALLEN_RELATION_ORDER)
-
     # Calculate entropy for each cell
     entropy_matrix = np.zeros((n, n))
     for i in range(n):
@@ -235,7 +217,6 @@ def plot_composition_heatmap_size(matrix, title, filename=None):
         The figure and axes objects
     """
     n = len(ALLEN_RELATION_ORDER)
-
     # Calculate cardinality for each cell
     cardinality_matrix = np.zeros((n, n))
     for i in range(n):
@@ -303,7 +284,6 @@ def plot_empirical_composition_heatmap(tally_dict, title, filename=None):
         The figure and axes objects
     """
     n = len(ALLEN_RELATION_ORDER)
-
     # Initialise the matrix with zeros
     freq_matrix = np.zeros((n, n, n))  # [rel1, rel2, result]
 
@@ -348,7 +328,6 @@ def plot_empirical_composition_heatmap(tally_dict, title, filename=None):
                 idx = int(most_common[i, j])
                 rel = ALLEN_RELATION_ORDER[idx]
                 pct = freq_matrix[i, j, idx] / cell_sum * 100
-
                 # Add text showing the most common relation and its percentage
                 ax.text(
                     j + 0.5,
@@ -428,7 +407,6 @@ def animate_distribution_evolution(pBorn, pDie, max_trials=10000, step_size=500)
     def update(frame):
         # Time the simulation
         start_time = time.time()
-
         # Run simulation for this step
         new_runs = simulateRed(pBorn, pDie, step_size)
 
@@ -454,7 +432,6 @@ def animate_distribution_evolution(pBorn, pDie, max_trials=10000, step_size=500)
         )
         elapsed = time.time() - start_time
         time_text.set_text(f"Time for {step_size} trials: {elapsed:.2f}s")
-
         return bars
 
     # Create animation
@@ -487,9 +464,8 @@ def generate_probability_tables(prob_ranges, trial_count=5000):
             print(f"Simulating with pBorn={pBorn}, pDie={pDie}...")
             dic = arSimulate(pBorn, pDie, trial_count)
 
-            # Normalise to get probabilities
-            total = sum(dic.values())
-            probs = {rel: dic[rel] / total for rel in ALLEN_RELATION_ORDER}
+            # Use shared normalize_counts function instead of direct calculation
+            probs = normalize_counts(dic)
 
             # Store results
             key = f"{pBorn},{pDie}"
@@ -557,8 +533,9 @@ if __name__ == "__main__":
     # Generate basic distribution visualisation for a specific simulation
     print("\nSimulating distribution for pBorn=0.1, pDie=0.1...")
     dist = arSimulate(0.1, 0.1, 10000)
-    total = sum(dist.values())
-    probs = {rel: dist[rel] / total for rel in dist}
+
+    # Use shared normalize_counts function instead of direct calculation
+    probs = normalize_counts(dist)
 
     plot_relation_distribution(
         probs,
@@ -569,11 +546,9 @@ if __name__ == "__main__":
     # Generate composition matrix visualisation
     print("\nGenerating composition matrix visualisation...")
     matrix = create_composition_matrix()
-
     plot_composition_heatmap_entropy(
         matrix, "Allen Relation Composition Table - Entropy", "composition_entropy.png"
     )
-
     plot_composition_heatmap_size(
         matrix,
         "Allen Relation Composition Table - Number of Possible Relations",
@@ -583,7 +558,6 @@ if __name__ == "__main__":
     # Generate visualisations for different probability combinations
     print("\nGenerating visualisations for different probability combinations...")
     prob_ranges = [0.01, 0.05, 0.1, 0.2, 0.5]
-
     # Comment out if time-consuming
     # generate_probability_tables(prob_ranges, 5000)
 
