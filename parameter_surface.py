@@ -21,6 +21,7 @@ import plotly.graph_objects as go
 # Import from our modules
 from constants import ALLEN_RELATION_ORDER, get_relation_name
 from simulations import simulateRed, arCode, set_random_seed
+from simulations import arSimulate, get_cache_stats
 import scipy.stats as stats
 
 # Import shared utilities
@@ -33,7 +34,11 @@ from analysis_utils import (
 
 
 def generate_parameter_surface_data(
-    p_values, selected_relation=None, trials_per_point=500, print_results=False
+    p_values,
+    selected_relation=None,
+    trials_per_point=500,
+    print_results=False,
+    use_cache=True,
 ):
     """
     Generate simulation data across a grid of birth/death probability parameters.
@@ -47,6 +52,7 @@ def generate_parameter_surface_data(
         selected_relation: The specific Allen relation to track (default: 'e' for equals)
         trials_per_point: Number of simulation trials for each parameter combination
         print_results: Whether to print uniformity test results for each point
+        use_cache: Whether to use cached simulation results when available
 
     Returns:
         Dictionary with grid data for 3D surface plotting
@@ -74,31 +80,53 @@ def generate_parameter_surface_data(
             # Set a fixed random seed for reproducibility at each grid point
             set_random_seed()
 
-            # Run simulation for this parameter combination
-            histories = simulateRed(pBorn, pDie, trials_per_point)
+            # Run simulation for this parameter combination, using cache if enabled
+            if use_cache:
+                # Use arSimulate with cache support
+                counts = arSimulate(
+                    pBorn, pDie, trials_per_point, test_uniformity=False, use_cache=True
+                )
+            else:
+                # Original method: directly simulate
+                histories = simulateRed(pBorn, pDie, trials_per_point)
 
-            # Count occurrences of each relation
-            counts = {rel: 0 for rel in ALLEN_RELATION_ORDER}
-            for history in histories:
-                relation = arCode(history)
-                if relation:
-                    counts[relation] += 1
+                # Count occurrences using NumPy arrays
+                n_relations = len(ALLEN_RELATION_ORDER)
+                counts_array = np.zeros(n_relations, dtype=np.int64)
+                relation_indices = {
+                    rel: idx for idx, rel in enumerate(ALLEN_RELATION_ORDER)
+                }
+
+                for history in histories:
+                    relation = arCode(history)
+                    if relation:
+                        counts_array[relation_indices[relation]] += 1
+
+                counts = {
+                    rel: counts_array[idx]
+                    for idx, rel in enumerate(ALLEN_RELATION_ORDER)
+                }
 
             # Calculate total and probabilities
             total_count = sum(counts.values())
             if total_count > 0:
                 # Calculate probabilities for all relations
-                probs = normalize_counts(counts)
+                probs_array = (
+                    np.array([counts[rel] for rel in ALLEN_RELATION_ORDER])
+                    / total_count
+                )
+                probs = {
+                    rel: probs_array[idx]
+                    for idx, rel in enumerate(ALLEN_RELATION_ORDER)
+                }
 
                 # Track probability of the selected relation
-                probability_grid[i, j] = probs[selected_relation]
+                selected_idx = relation_indices[selected_relation]
+                probability_grid[i, j] = probs_array[selected_idx]
 
-                # Calculate chi-square statistic for uniformity test
-                observed = [counts[rel] for rel in ALLEN_RELATION_ORDER]
-
-                # Calculate entropy of the distribution
-                prob_values = list(probs.values())
-                entropy = calculate_shannon_entropy(prob_values)
+                # Calculate entropy directly from the probability array
+                non_zero_probs = probs_array[probs_array > 0]
+                entropy = -np.sum(non_zero_probs * np.log2(non_zero_probs))
                 entropy_grid[i, j] = entropy
 
                 # Handle case where not enough data for chi-square test

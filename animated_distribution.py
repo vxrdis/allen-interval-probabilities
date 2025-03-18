@@ -38,8 +38,7 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
     """
     Run a simulation in steps, tracking evolution of relation frequencies.
 
-    This function simulates Allen relation occurrences and collects data at regular
-    intervals to show how the distribution evolves over time.
+    This implementation uses NumPy arrays for efficient storage and processing of simulation data.
 
     Args:
         pBorn: Probability of birth transition
@@ -52,9 +51,31 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
     """
     # Initialize counters and results storage
     total_trials = 0
-    counts = {rel: 0 for rel in ALLEN_RELATION_ORDER}
-    frames = []
+
+    # Initialize counts as NumPy array
+    n_relations = len(ALLEN_RELATION_ORDER)
+    counts_array = np.zeros(n_relations, dtype=np.int64)
+
+    # Calculate number of frames needed
+    n_frames = (max_trials + step_size - 1) // step_size  # Ceiling division
+
+    # Pre-allocate arrays for all frame data
+    frame_trials = np.zeros(n_frames, dtype=np.int64)
+    frame_counts = np.zeros((n_frames, n_relations), dtype=np.int64)
+    frame_probs = np.zeros((n_frames, n_relations), dtype=np.float64)
+    frame_chi2 = np.zeros(n_frames, dtype=np.float64)
+    frame_pvals = np.zeros(n_frames, dtype=np.float64)
+    frame_entropy = np.zeros(n_frames, dtype=np.float64)
+    frame_durations = np.zeros(n_frames, dtype=np.float64)
+    frame_elapsed = np.zeros(n_frames, dtype=np.float64)
+
+    # For reference, store relation indices in a mapping
+    relation_indices = {rel: i for i, rel in enumerate(ALLEN_RELATION_ORDER)}
+
+    # Start timing
     start_time = time.time()
+
+    frame_idx = 0
 
     # Run simulation in steps
     while total_trials < max_trials:
@@ -70,73 +91,61 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
         for history in histories:
             relation = arCode(history)
             if relation:
-                counts[relation] += 1
+                counts_array[relation_indices[relation]] += 1
 
         total_trials += current_step
 
-        # Calculate probabilities using normalize_counts utility
-        probabilities = normalize_counts(counts)
+        # Calculate probabilities
+        frame_counts[frame_idx] = counts_array.copy()
+        total_count = np.sum(counts_array)
+        frame_probs[frame_idx] = counts_array / total_count if total_count > 0 else 0
+
+        # Store trial count
+        frame_trials[frame_idx] = total_trials
 
         # Calculate statistical metrics
-        observed = [counts[rel] for rel in ALLEN_RELATION_ORDER]
+        if total_count > 0:
+            # Convert array back to dict for compatibility with test_uniform_distribution
+            counts_dict = {
+                rel: counts_array[relation_indices[rel]] for rel in ALLEN_RELATION_ORDER
+            }
+            test_results = test_uniform_distribution(counts_dict)
 
-        # Chi-square test (handle case where we don't have enough data)
-        if sum(counts.values()) > 0:
-            test_results = test_uniform_distribution(counts)
-            chi2 = test_results["chi2"]
-            p_val = test_results["p_value"]
+            # Store results in arrays
+            frame_chi2[frame_idx] = test_results["chi2"]
+            frame_pvals[frame_idx] = test_results["p_value"]
 
             # Print current step uniformity test results
             print(
-                f"Step {total_trials}: chi²={chi2:.4f}, p={p_val:.6f} - "
-                + f"{'Reject' if p_val < 0.05 else 'Cannot reject'} uniformity"
+                f"Step {total_trials}: chi²={test_results['chi2']:.4f}, p={test_results['p_value']:.6f} - "
+                + f"{'Reject' if test_results['p_value'] < 0.05 else 'Cannot reject'} uniformity"
+            )
+
+            # Calculate entropy from probabilities
+            non_zero_probs = frame_probs[frame_idx][frame_probs[frame_idx] > 0]
+            frame_entropy[frame_idx] = (
+                -np.sum(non_zero_probs * np.log2(non_zero_probs))
+                if len(non_zero_probs) > 0
+                else 0
             )
         else:
-            test_results = None
-            chi2, p_val = 0, 1.0
+            frame_chi2[frame_idx] = 0
+            frame_pvals[frame_idx] = 1.0
+            frame_entropy[frame_idx] = 0
 
-        # Calculate the full distribution analysis
-        analysis = analyze_distribution(counts) if sum(counts.values()) > 0 else None
-
-        # Calculate entropy using shared utility
-        probs_list = [probabilities[rel] for rel in ALLEN_RELATION_ORDER]
-        entropy_val = calculate_shannon_entropy(probs_list)
-
-        most_common_rel = (
-            max(probabilities.items(), key=lambda x: x[1])
-            if probabilities
-            else (None, 0)
-        )
-
-        least_common_rel = (
-            min(probabilities.items(), key=lambda x: x[1])
-            if probabilities
-            else (None, 0)
-        )
-
-        # Calculate step duration
+        # Record timing information
         step_duration = time.time() - step_start_time
+        frame_durations[frame_idx] = step_duration
+        frame_elapsed[frame_idx] = time.time() - start_time
 
-        # Store frame data with enhanced metrics
-        frames.append(
-            {
-                "trial_count": total_trials,
-                "counts": counts.copy(),
-                "probabilities": probabilities,
-                "chi2": chi2,
-                "p_value": p_val,
-                "entropy": analysis["entropy"] if analysis else 0,
-                "most_common": analysis["most_common"] if analysis else (None, 0),
-                "least_common": analysis["least_common"] if analysis else (None, 0),
-                "step_duration": step_duration,
-                "elapsed_time": time.time() - start_time,
-                "analysis": analysis,
-                "test_results": test_results,
-            }
-        )
+        # Move to next frame
+        frame_idx += 1
 
-    # Run final uniformity test on complete simulation
-    final_analysis = analyze_distribution(counts)
+    # Calculate final metrics
+    final_counts_dict = {
+        rel: counts_array[relation_indices[rel]] for rel in ALLEN_RELATION_ORDER
+    }
+    final_analysis = analyze_distribution(final_counts_dict)
     final_test_results = final_analysis["uniformity_test"]
     final_chi2 = final_test_results["chi2"]
     final_p_val = final_test_results["p_value"]
@@ -145,14 +154,77 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
     print(f"Uniformity test: chi²={final_chi2:.4f}, p={final_p_val:.6f}")
     print(f"{final_test_results['conclusion']}")
 
+    # Convert the NumPy array data back to frame dictionaries for compatibility with existing code
+    frames = []
+    for i in range(frame_idx):
+        # Find most/least common relations for this frame
+        if np.sum(frame_counts[i]) > 0:
+            most_common_idx = np.argmax(frame_probs[i])
+            most_common_rel = ALLEN_RELATION_ORDER[most_common_idx]
+            most_common_prob = frame_probs[i, most_common_idx]
+
+            least_common_idx = np.argmin(frame_probs[i])
+            least_common_rel = ALLEN_RELATION_ORDER[least_common_idx]
+            least_common_prob = frame_probs[i, least_common_idx]
+
+            most_common = {
+                "label": most_common_rel,
+                "count": int(frame_counts[i, most_common_idx]),
+                "probability": float(most_common_prob),
+            }
+
+            least_common = {
+                "label": least_common_rel,
+                "count": int(frame_counts[i, least_common_idx]),
+                "probability": float(least_common_prob),
+            }
+        else:
+            most_common = {"label": None, "count": 0, "probability": 0}
+            least_common = {"label": None, "count": 0, "probability": 0}
+
+        # Build frame dictionary
+        frame = {
+            "trial_count": int(frame_trials[i]),
+            "counts": {
+                rel: int(frame_counts[i, relation_indices[rel]])
+                for rel in ALLEN_RELATION_ORDER
+            },
+            "probabilities": {
+                rel: float(frame_probs[i, relation_indices[rel]])
+                for rel in ALLEN_RELATION_ORDER
+            },
+            "chi2": float(frame_chi2[i]),
+            "p_value": float(frame_pvals[i]),
+            "entropy": float(frame_entropy[i]),
+            "most_common": most_common,
+            "least_common": least_common,
+            "step_duration": float(frame_durations[i]),
+            "elapsed_time": float(frame_elapsed[i]),
+        }
+        frames.append(frame)
+
+    # Return results with same structure as before, but internally optimized
     return {
         "params": {"pBorn": pBorn, "pDie": pDie},
         "frames": frames,
-        "final_counts": counts,
-        "final_probabilities": probabilities,
+        "final_counts": final_counts_dict,
+        "final_probabilities": {
+            rel: float(frame_probs[-1, relation_indices[rel]])
+            for rel in ALLEN_RELATION_ORDER
+        },
         "final_analysis": final_analysis,
         "final_test_results": final_test_results,
         "total_duration": time.time() - start_time,
+        # Add raw NumPy arrays for direct access if needed
+        "_raw": {
+            "counts": frame_counts[:frame_idx],
+            "probs": frame_probs[:frame_idx],
+            "trials": frame_trials[:frame_idx],
+            "chi2": frame_chi2[:frame_idx],
+            "pvals": frame_pvals[:frame_idx],
+            "entropy": frame_entropy[:frame_idx],
+            "relation_indices": relation_indices,
+        },
     }
 
 
@@ -266,8 +338,8 @@ def create_distribution_chart(simulation_data, frame_idx=None):
     )
 
     # Add shape to highlight the current most common relation if available
-    if "most_common" in frame and frame["most_common"][0]:
-        most_common_rel = frame["most_common"][0]
+    if "most_common" in frame and frame["most_common"]["label"]:
+        most_common_rel = frame["most_common"]["label"]
         most_common_idx = ALLEN_RELATION_ORDER.index(most_common_rel)
         fig.add_shape(
             type="rect",

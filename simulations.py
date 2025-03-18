@@ -31,6 +31,16 @@ from analysis_utils import (
     format_uniformity_test_results,
 )
 
+import multiprocessing
+from functools import partial
+import os
+import time
+import json
+import hashlib
+import datetime
+from pathlib import Path
+from functools import lru_cache
+
 
 # Replace global dictionaries with a registry class
 class SimulatorRegistry:
@@ -92,8 +102,7 @@ class SimulatorRegistry:
 # Create a global registry instance
 registry = SimulatorRegistry()
 
-# Create a helper simulator for utility functions that need simulator methods
-# but don't need a specific parameter set
+# Create a helper simulator for utility functions that need simulator methods that don't need a specific parameter set
 utility_simulator = None
 
 
@@ -105,8 +114,201 @@ def get_utility_simulator():
     return utility_simulator
 
 
+# Add a simulation results cache
+class SimulationCache:
+    """Cache for storing and retrieving simulation results based on parameters."""
+
+    def __init__(self, cache_dir=None, memory_cache_size=100):
+        """
+        Initialize the simulation cache.
+
+        Args:
+            cache_dir: Directory to store persistent cache (None for memory-only cache)
+            memory_cache_size: Size of in-memory LRU cache
+        """
+        self.memory_cache = {}
+        self.memory_cache_size = memory_cache_size
+        self.memory_cache_order = []
+        self.cache_dir = cache_dir
+
+        # Create cache directory if persistent caching is enabled
+        if cache_dir:
+            self.cache_path = Path(cache_dir)
+            self.cache_path.mkdir(exist_ok=True, parents=True)
+        else:
+            self.cache_path = None
+
+        # Initialize cache stats
+        self.hits = 0
+        self.misses = 0
+
+    def _get_key(self, pBorn, pDie, trials):
+        """Generate a unique key for the parameter combination."""
+        # Round to handle floating point precision issues
+        key = f"{round(pBorn, 8)},{round(pDie, 8)},{trials}"
+        return key
+
+    def _get_disk_key(self, pBorn, pDie, trials):
+        """Generate a filename-safe key for disk storage."""
+        key = self._get_key(pBorn, pDie, trials)
+        return hashlib.md5(key.encode()).hexdigest()
+
+    def get(self, pBorn, pDie, trials):
+        """
+        Retrieve results from cache if available.
+
+        Args:
+            pBorn: Birth probability
+            pDie: Death probability
+            trials: Number of trials
+
+        Returns:
+            Cached results or None if not found
+        """
+        key = self._get_key(pBorn, pDie, trials)
+
+        # Check memory cache first
+        if key in self.memory_cache:
+            # Update LRU order
+            self.memory_cache_order.remove(key)
+            self.memory_cache_order.append(key)
+            self.hits += 1
+            return self.memory_cache[key]
+
+        # Check disk cache if enabled
+        if self.cache_path:
+            disk_key = self._get_disk_key(pBorn, pDie, trials)
+            cache_file = self.cache_path / f"{disk_key}.json"
+
+            if cache_file.exists():
+                try:
+                    with open(cache_file, "r") as f:
+                        data = json.load(f)
+
+                    # Validate cache entry
+                    if self._validate_cache_entry(data, pBorn, pDie, trials):
+                        # Add to memory cache
+                        self._add_to_memory_cache(key, data)
+                        self.hits += 1
+                        return data
+                except (json.JSONDecodeError, IOError):
+                    # Invalid cache file, ignore
+                    pass
+
+        self.misses += 1
+        return None
+
+    def _validate_cache_entry(self, data, pBorn, pDie, trials):
+        """Validate that a cache entry matches the requested parameters."""
+        if not isinstance(data, dict):
+            return False
+
+        meta = data.get("metadata", {})
+        return (
+            abs(meta.get("pBorn", 0) - pBorn) < 1e-8
+            and abs(meta.get("pDie", 0) - pDie) < 1e-8
+            and meta.get("trials", 0) == trials
+        )
+
+    def put(self, pBorn, pDie, trials, results, test_results=None):
+        """
+        Store results in cache.
+
+        Args:
+            pBorn: Birth probability
+            pDie: Death probability
+            trials: Number of trials
+            results: Simulation results dictionary
+            test_results: Optional test results dictionary
+
+        Returns:
+            Cache key
+        """
+        key = self._get_key(pBorn, pDie, trials)
+
+        # Prepare data structure with metadata
+        data = {
+            "results": results,
+            "test_results": test_results,
+            "metadata": {
+                "pBorn": pBorn,
+                "pDie": pDie,
+                "trials": trials,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "cache_key": key,
+            },
+        }
+
+        # Add to memory cache
+        self._add_to_memory_cache(key, data)
+
+        # Write to disk if enabled
+        if self.cache_path:
+            disk_key = self._get_disk_key(pBorn, pDie, trials)
+            cache_file = self.cache_path / f"{disk_key}.json"
+
+            try:
+                with open(cache_file, "w") as f:
+                    json.dump(data, f, indent=2)
+            except IOError:
+                # Failed to write to disk, continue with memory cache only
+                pass
+
+        return key
+
+    def _add_to_memory_cache(self, key, data):
+        """Add an entry to the memory cache with LRU tracking."""
+        # If key already exists, update its position
+        if key in self.memory_cache:
+            self.memory_cache_order.remove(key)
+
+        # Add to memory cache
+        self.memory_cache[key] = data
+        self.memory_cache_order.append(key)
+
+        # Enforce cache size limit
+        while len(self.memory_cache) > self.memory_cache_size:
+            oldest_key = self.memory_cache_order.pop(0)
+            self.memory_cache.pop(oldest_key, None)
+
+    def clear(self):
+        """Clear all cached results."""
+        self.memory_cache.clear()
+        self.memory_cache_order.clear()
+
+        if self.cache_path and self.cache_path.exists():
+            for cache_file in self.cache_path.glob("*.json"):
+                try:
+                    os.remove(cache_file)
+                except OSError:
+                    pass
+
+    def get_stats(self):
+        """Get cache statistics."""
+        return {
+            "hits": self.hits,
+            "misses": self.misses,
+            "hit_ratio": (
+                self.hits / (self.hits + self.misses)
+                if (self.hits + self.misses) > 0
+                else 0
+            ),
+            "memory_entries": len(self.memory_cache),
+            "disk_entries": (
+                len(list(self.cache_path.glob("*.json"))) if self.cache_path else 0
+            ),
+        }
+
+
+# Create global cache instance
+simulation_cache = SimulationCache(
+    cache_dir=os.path.join(os.path.dirname(__file__), ".simulation_cache"),
+    memory_cache_size=100,
+)
+
+
 class IntervalSimulator:
-    def __init__(self, pBorn, pDie, trials):
+    def __init__(self, pBorn, pDie, trials, use_cache=True):
         """
         Initialize the interval simulator with given parameters.
 
@@ -114,11 +316,13 @@ class IntervalSimulator:
             pBorn: Probability of transition from unborn to alive
             pDie: Probability of transition from alive to dead
             trials: Number of simulation trials to run
+            use_cache: Whether to use result caching
         """
         self.pBorn = pBorn
         self.pDie = pDie
         self.trials = trials
         self.results = None
+        self.use_cache = use_cache
 
         # Store simulation state in instance variables
         self.tally = {}
@@ -152,7 +356,9 @@ class IntervalSimulator:
 
         return self
 
-    def simulate(self, test_uniformity=False, print_results=False):
+    def simulate(
+        self, test_uniformity=False, print_results=False, force_recompute=False
+    ):
         """
         Run Allen relation simulation with the specified parameters.
 
@@ -162,11 +368,45 @@ class IntervalSimulator:
         Args:
             test_uniformity: Whether to test the result distribution for uniformity
             print_results: Whether to print the uniformity test results
+            force_recompute: Whether to force recomputation even if results are cached
 
         Returns:
             If test_uniformity is False: Dictionary of relation frequencies
             If test_uniformity is True: Tuple of (freq_dict, test_results_dict)
         """
+        # Check cache for existing results if caching is enabled and not forcing recomputation
+        if self.use_cache and not force_recompute:
+            cached_data = simulation_cache.get(self.pBorn, self.pDie, self.trials)
+            if cached_data:
+                self.results = cached_data["results"]
+
+                # Update instance tally
+                self._update_tally(self.results)
+                self.simulation_count += 1
+
+                if test_uniformity:
+                    test_results = cached_data.get("test_results")
+
+                    # If no test results in cache, compute them
+                    if not test_results:
+                        test_results = test_uniform_distribution(self.results)
+
+                    if print_results:
+                        print(
+                            f"Using cached results for pBorn={self.pBorn}, pDie={self.pDie}, trials={self.trials}"
+                        )
+                        print_uniformity_test_results(test_results)
+
+                    return self.results, test_results
+
+                if print_results:
+                    print(
+                        f"Using cached results for pBorn={self.pBorn}, pDie={self.pDie}, trials={self.trials}"
+                    )
+
+                return self.results
+
+        # No cache hit or caching disabled, run the simulation
         redRuns = self._simulate_intervals()
         dic = self._score_runs(redRuns)
         self.results = dic
@@ -176,15 +416,219 @@ class IntervalSimulator:
         self.simulation_count += 1
 
         # Test for uniform distribution if requested
+        test_results = None
         if test_uniformity:
             test_results = test_uniform_distribution(dic)
 
             if print_results:
                 print_uniformity_test_results(test_results)
 
-            return dic, test_results
+        # Cache results if caching is enabled
+        if self.use_cache:
+            simulation_cache.put(self.pBorn, self.pDie, self.trials, dic, test_results)
 
+        if test_uniformity:
+            return dic, test_results
         return dic
+
+    def simulate_parallel(
+        self,
+        n_processes=None,
+        batch_size=None,
+        test_uniformity=False,
+        force_recompute=False,
+    ):
+        """
+        Run Allen relation simulation using multiple processes in parallel.
+
+        This method distributes the simulation workload across multiple CPU cores for
+        significantly improved performance on large simulations.
+
+        Args:
+            n_processes: Number of processes to use (defaults to CPU count)
+            batch_size: Size of each batch of trials (defaults to trials/n_processes)
+            test_uniformity: Whether to test the result distribution for uniformity
+            force_recompute: Whether to force recomputation even if results are cached
+
+        Returns:
+            If test_uniformity is False: Dictionary of relation frequencies
+            If test_uniformity is True: Tuple of (freq_dict, test_results_dict)
+        """
+        # Check cache for existing results if caching is enabled and not forcing recomputation
+        if self.use_cache and not force_recompute:
+            cached_data = simulation_cache.get(self.pBorn, self.pDie, self.trials)
+            if cached_data:
+                self.results = cached_data["results"]
+
+                # Update instance tally
+                self._update_tally(self.results)
+                self.simulation_count += 1
+
+                print(
+                    f"Using cached results for pBorn={self.pBorn}, pDie={self.pDie}, trials={self.trials}"
+                )
+
+                if test_uniformity:
+                    test_results = cached_data.get("test_results")
+
+                    # If no test results in cache, compute them
+                    if not test_results:
+                        test_results = test_uniform_distribution(self.results)
+
+                    return self.results, test_results
+
+                return self.results
+
+        # Determine number of processes to use
+        if n_processes is None:
+            n_processes = multiprocessing.cpu_count()
+        n_processes = min(n_processes, multiprocessing.cpu_count(), self.trials)
+
+        # Determine batch size for each process
+        if batch_size is None:
+            batch_size = (self.trials + n_processes - 1) // n_processes
+
+        # Calculate number of batches needed
+        n_batches = (self.trials + batch_size - 1) // batch_size
+
+        # Prepare batch parameters
+        batch_trials = [
+            min(batch_size, self.trials - i * batch_size) for i in range(n_batches)
+        ]
+
+        # Print information about parallel execution
+        print(
+            f"Running {self.trials} trials across {n_processes} processes in {n_batches} batches"
+        )
+        print(f"Birth probability: {self.pBorn}, Death probability: {self.pDie}")
+
+        # Create a pool of worker processes
+        with multiprocessing.Pool(processes=n_processes) as pool:
+            # Create a partial function with fixed parameters
+            worker_func = partial(
+                self._simulate_batch, pBorn=self.pBorn, pDie=self.pDie
+            )
+
+            # Map the function over all batch sizes
+            # Using imap to get results as they complete
+            results = list(pool.imap(worker_func, batch_trials))
+
+        # Combine results from all batches
+        combined_counts = self._init_relation_dict()
+        for counts in results:
+            for rel in ALLEN_RELATION_ORDER:
+                combined_counts[rel] += counts[rel]
+
+        # Store the combined results
+        self.results = combined_counts
+
+        # Update instance tally
+        self._update_tally(combined_counts)
+        self.simulation_count += 1
+
+        # Cache results if caching is enabled
+        test_results = None
+        if test_uniformity:
+            test_results = test_uniform_distribution(combined_counts)
+
+        if self.use_cache:
+            simulation_cache.put(
+                self.pBorn, self.pDie, self.trials, combined_counts, test_results
+            )
+
+        # Test for uniform distribution if requested
+        if test_uniformity:
+            return combined_counts, test_results
+
+        return combined_counts
+
+    # Add method for batch execution with progress tracking
+    def simulate_batches(self, n_batches=10, test_uniformity=False, show_progress=True):
+        """
+        Run Allen relation simulation in sequential batches with progress tracking.
+
+        This method divides the simulation into batches and shows progress after
+        each batch, which is useful for monitoring long-running simulations.
+
+        Args:
+            n_batches: Number of batches to divide the trials into
+            test_uniformity: Whether to test the result distribution for uniformity
+            show_progress: Whether to show progress after each batch
+
+        Returns:
+            If test_uniformity is False: Dictionary of relation frequencies
+            If test_uniformity is True: Tuple of (freq_dict, test_results_dict)
+        """
+        # Initialize results
+        combined_counts = self._init_relation_dict()
+        batch_size = (self.trials + n_batches - 1) // n_batches
+
+        if show_progress:
+            print(
+                f"Running {self.trials} trials in {n_batches} batches of ~{batch_size} each"
+            )
+            print(f"Birth probability: {self.pBorn}, Death probability: {self.pDie}")
+
+        start_time = time.time()
+
+        # Run simulation in batches
+        for i in range(n_batches):
+            # Calculate size of this batch
+            current_batch_size = min(batch_size, self.trials - i * batch_size)
+            if current_batch_size <= 0:
+                break
+
+            # Create a temporary simulator for this batch
+            temp_simulator = IntervalSimulator(
+                self.pBorn, self.pDie, current_batch_size
+            )
+            batch_counts = temp_simulator.simulate()
+
+            # Update combined counts
+            for rel in ALLEN_RELATION_ORDER:
+                combined_counts[rel] += batch_counts[rel]
+
+            # Show progress
+            if show_progress:
+                trials_completed = min((i + 1) * batch_size, self.trials)
+                percent_complete = trials_completed / self.trials * 100
+                elapsed = time.time() - start_time
+                estimated_total = elapsed / percent_complete * 100
+                remaining = estimated_total - elapsed
+
+                print(
+                    f"Batch {i+1}/{n_batches}: {trials_completed}/{self.trials} trials "
+                    + f"({percent_complete:.1f}%) - ETA: {remaining:.1f}s"
+                )
+
+                # Show intermediate distribution for feedback
+                if i > 0 and i % max(1, n_batches // 5) == 0:
+                    test_results = test_uniform_distribution(combined_counts)
+                    print(
+                        f"  Chi²: {test_results['chi2']:.4f}, p-value: {test_results['p_value']:.6f}"
+                    )
+
+        # Store the combined results
+        self.results = combined_counts
+
+        # Update instance tally
+        self._update_tally(combined_counts)
+        self.simulation_count += 1
+
+        # Show final timing
+        if show_progress:
+            total_time = time.time() - start_time
+            print(
+                f"Completed {self.trials} trials in {total_time:.2f}s "
+                + f"({self.trials/total_time:.1f} trials/second)"
+            )
+
+        # Test for uniform distribution if requested
+        if test_uniformity:
+            test_results = test_uniform_distribution(combined_counts)
+            return combined_counts, test_results
+
+        return combined_counts
 
     def generate_composition_table(self, additional_trials=None):
         """
@@ -316,26 +760,89 @@ class IntervalSimulator:
 
     def _simulate_intervals(self):
         """
-        Simulate interval state transitions and produce histories.
+        Simulate interval state transitions and produce histories using vectorized operations.
+
+        This implementation uses NumPy's geometric sampling to directly determine transition times,
+        avoiding explicit loops over state transitions.
 
         Returns:
             List of histories (state transitions)
         """
-        temp = []
-        for run in range(self.trials):
-            hist = [[0, 0]]  # Both intervals start as unborn [a-state, b-state]
+        # For each trial, we need to determine:
+        # 1. Time to transition from unborn (0) to alive (1) for both intervals
+        # 2. Time to transition from alive (1) to dead (2) for both intervals
 
-            # Continue until both intervals are dead
-            while not (hist[-1] == [2, 2]):
-                first = self._update_state(hist[-1][0])
-                second = self._update_state(hist[-1][1])
+        # Sample from geometric distribution to get transition times
+        # Note: numpy's geometric starts from 1, so we subtract 1 to start from 0
+        if self.pBorn > 0:
+            unborn_to_alive_a = np.random.geometric(self.pBorn, self.trials) - 1
+            unborn_to_alive_b = np.random.geometric(self.pBorn, self.trials) - 1
+        else:
+            # If pBorn is 0, the intervals never transition to alive (they remain unborn forever)
+            # This is a degenerate case, but we'll handle it by setting to infinity
+            unborn_to_alive_a = np.full(self.trials, np.inf)
+            unborn_to_alive_b = np.full(self.trials, np.inf)
 
-                # Only append if state changed (avoid duplication)
-                if not (hist[-1] == [first, second]):
-                    hist.append([first, second])
+        if self.pDie > 0:
+            alive_to_dead_a = np.random.geometric(self.pDie, self.trials) - 1
+            alive_to_dead_b = np.random.geometric(self.pDie, self.trials) - 1
+        else:
+            # If pDie is 0, the intervals never transition to dead (they remain alive forever)
+            # This is also a degenerate case, but we'll handle it for completeness
+            alive_to_dead_a = np.full(self.trials, np.inf)
+            alive_to_dead_b = np.full(self.trials, np.inf)
 
-            temp.append(hist)
-        return temp
+        # Calculate absolute times for each state transition
+        time_alive_a = unborn_to_alive_a
+        time_alive_b = unborn_to_alive_b
+        time_dead_a = time_alive_a + alive_to_dead_a
+        time_dead_b = time_alive_b + alive_to_dead_b
+
+        # Reconstruct histories from transition times
+        histories = []
+        for i in range(self.trials):
+            # Create timeline of all events (transitions)
+            timeline = []
+
+            # Add transition events for interval A
+            if np.isfinite(time_alive_a[i]):
+                timeline.append((time_alive_a[i], "a", 1))  # A transitions to alive
+            if np.isfinite(time_dead_a[i]):
+                timeline.append((time_dead_a[i], "a", 2))  # A transitions to dead
+
+            # Add transition events for interval B
+            if np.isfinite(time_alive_b[i]):
+                timeline.append((time_alive_b[i], "b", 1))  # B transitions to alive
+            if np.isfinite(time_dead_b[i]):
+                timeline.append((time_dead_b[i], "b", 2))  # B transitions to dead
+
+            # Sort timeline by time
+            timeline.sort()
+
+            # Initialize history with both intervals unborn
+            history = [[0, 0]]
+
+            # Process events to build history
+            for _, interval, state in timeline:
+                # Copy the last state
+                new_state = history[-1].copy()
+                # Update the appropriate interval's state
+                if interval == "a":
+                    new_state[0] = state
+                else:  # interval == 'b'
+                    new_state[1] = state
+                # Add to history if state changed
+                if new_state != history[-1]:
+                    history.append(new_state)
+
+            # If we didn't reach the final state [2,2], add it
+            # This handles the case where one or both intervals never reach the dead state
+            if history[-1] != [2, 2]:
+                history.append([2, 2])
+
+            histories.append(history)
+
+        return histories
 
     def _update_state(self, state):
         """
@@ -357,7 +864,7 @@ class IntervalSimulator:
 
     def _score_runs(self, reducedRuns):
         """
-        Score the reduced runs to count occurrences of each Allen relation.
+        Score the reduced runs to count occurrences of each Allen relation using NumPy arrays.
 
         Args:
             reducedRuns: List of histories (state transitions)
@@ -365,11 +872,19 @@ class IntervalSimulator:
         Returns:
             Dictionary counting occurrences of each relation
         """
-        dic = self._init_relation_dict()
+        # Initialize a counts array
+        n_relations = len(ALLEN_RELATION_ORDER)
+        counts_array = np.zeros(n_relations, dtype=np.int64)
+        relation_indices = {rel: i for i, rel in enumerate(ALLEN_RELATION_ORDER)}
+
+        # Process each history
         for r in reducedRuns:
             relation_code = self._get_relation_code(r)
             if relation_code:  # Only count if valid relation is identified
-                dic[relation_code] += 1
+                counts_array[relation_indices[relation_code]] += 1
+
+        # Convert back to dictionary format for compatibility
+        dic = {rel: counts_array[i] for i, rel in enumerate(ALLEN_RELATION_ORDER)}
         return dic
 
     def _init_relation_dict(self):
@@ -553,13 +1068,14 @@ def set_random_seed(seed=42):
     np.random.seed(seed)
 
 
-def demo(use_seed=True, trials=10000):
+def demo(use_seed=True, trials=10000, use_parallel=True):
     """
     Run demonstration simulations with various probability settings.
 
     Args:
         use_seed: If True, use a fixed random seed for reproducibility
         trials: Number of simulation trials to run
+        use_parallel: Whether to use parallel execution
     """
     if use_seed:
         set_random_seed()
@@ -580,11 +1096,18 @@ def demo(use_seed=True, trials=10000):
 
     simulators = []
     for pBorn, pDie in configs:
-        # Create and use simulator
+        # Create simulator
         simulator = IntervalSimulator(pBorn, pDie, trials)
-        result, test_results = simulator.simulate(
-            test_uniformity=True, print_results=False
-        )
+
+        # Run using parallel or sequential mode based on parameter
+        if use_parallel:
+            print(f"\nRunning parallel simulation for pBorn={pBorn}, pDie={pDie}")
+            result, test_results = simulator.simulate_parallel(test_uniformity=True)
+        else:
+            print(f"\nRunning sequential simulation for pBorn={pBorn}, pDie={pDie}")
+            result, test_results = simulator.simulate(
+                test_uniformity=True, print_results=False
+            )
 
         # Print distribution and test results
         analysis = simulator.get_distribution_analysis()
@@ -635,7 +1158,15 @@ def demo(use_seed=True, trials=10000):
 
 
 # Updated versions of functions to use the simulator registry
-def arSimulate(probBorn, probDie, trials, test_uniformity=False, print_results=False):
+def arSimulate(
+    probBorn,
+    probDie,
+    trials,
+    test_uniformity=False,
+    print_results=False,
+    use_cache=True,
+    force_recompute=False,
+):
     """
     Run Allen relation simulation with specified birth/death probabilities.
 
@@ -647,6 +1178,8 @@ def arSimulate(probBorn, probDie, trials, test_uniformity=False, print_results=F
         trials: Number of trials to run
         test_uniformity: Whether to test the result distribution for uniformity
         print_results: Whether to print the uniformity test results
+        use_cache: Whether to use result caching
+        force_recompute: Whether to force recomputation even if results are cached
 
     Returns:
         If test_uniformity is False: Dictionary of relation frequencies
@@ -654,8 +1187,12 @@ def arSimulate(probBorn, probDie, trials, test_uniformity=False, print_results=F
     """
     # Get existing simulator or create a new one
     simulator = registry.get_or_create_simulator(probBorn, probDie, trials)
+    simulator.use_cache = use_cache  # Set cache usage flag
+
     return simulator.simulate(
-        test_uniformity=test_uniformity, print_results=print_results
+        test_uniformity=test_uniformity,
+        print_results=print_results,
+        force_recompute=force_recompute,
     )
 
 
@@ -889,6 +1426,94 @@ def checkSum(dic):
         Sum of all values
     """
     return sum(dic.values())
+
+
+# Add a convenience function for parallel simulation
+def simulate_parallel(
+    pBorn,
+    pDie,
+    trials,
+    n_processes=None,
+    test_uniformity=False,
+    use_cache=True,
+    force_recompute=False,
+):
+    """
+    Run a parallel Allen relation simulation with the specified parameters.
+
+    This is a convenience function that creates a simulator and runs it in parallel.
+
+    Args:
+        pBorn: Birth probability
+        pDie: Death probability
+        trials: Number of simulation trials to run
+        n_processes: Number of processes to use (defaults to CPU count)
+        test_uniformity: Whether to test the result distribution for uniformity
+        use_cache: Whether to use result caching
+        force_recompute: Whether to force recomputation even if results are cached
+
+    Returns:
+        If test_uniformity is False: Dictionary of relation frequencies
+        If test_uniformity is True: Tuple of (freq_dict, test_results_dict)
+    """
+    simulator = IntervalSimulator(pBorn, pDie, trials)
+    simulator.use_cache = use_cache  # Set cache usage flag
+
+    return simulator.simulate_parallel(
+        n_processes=n_processes,
+        test_uniformity=test_uniformity,
+        force_recompute=force_recompute,
+    )
+
+
+# Add cache management functions
+def get_cache_stats():
+    """
+    Get statistics about the simulation cache.
+
+    Returns:
+        Dictionary with cache statistics
+    """
+    return simulation_cache.get_stats()
+
+
+def clear_cache():
+    """
+    Clear all cached simulation results.
+    """
+    simulation_cache.clear()
+    print("Simulation cache cleared")
+
+
+def warm_cache(param_list=None):
+    """
+    Pre-compute and cache results for common parameter combinations.
+
+    Args:
+        param_list: List of (pBorn, pDie, trials) tuples to pre-compute
+                    If None, uses a default set of common parameters
+    """
+    if param_list is None:
+        # Default set of commonly used parameters
+        param_list = [
+            (0.5, 0.5, 10000),
+            (0.1, 0.1, 10000),
+            (0.01, 0.01, 10000),
+            (0.2, 0.1, 10000),
+        ]
+
+    print(f"Warming cache with {len(param_list)} parameter combinations...")
+
+    for i, (pBorn, pDie, trials) in enumerate(param_list):
+        print(
+            f"Computing [{i+1}/{len(param_list)}] pBorn={pBorn}, pDie={pDie}, trials={trials}"
+        )
+        results, test_results = arSimulate(
+            pBorn, pDie, trials, test_uniformity=True, use_cache=True
+        )
+
+    print("Cache warming complete")
+    print(f"Cache stats: {get_cache_stats()}")
 
 
 # If run as main script
