@@ -20,6 +20,11 @@ import plotly.graph_objects as go
 from relations import ALLEN_RELATION_ORDER, get_relation_name
 from simulations import simulateRed, arCode, set_random_seed
 from constants import ALLEN_RELATION_ORDER, RELATION_COLOURS, get_relation_name
+from analysis_utils import (
+    test_uniform_distribution,
+    calculate_expected_frequencies,
+    analyze_distribution,
+)
 
 # Import shared utilities
 from shared_utils import (
@@ -73,16 +78,25 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
         probabilities = normalize_counts(counts)
 
         # Calculate statistical metrics
-        expected = [sum(counts.values()) / len(ALLEN_RELATION_ORDER)] * len(
-            ALLEN_RELATION_ORDER
-        )
         observed = [counts[rel] for rel in ALLEN_RELATION_ORDER]
 
         # Chi-square test (handle case where we don't have enough data)
-        if sum(counts.values()) > 0 and all(e > 0 for e in expected):
-            chi2, p_val = stats.chisquare(observed, expected)
+        if sum(counts.values()) > 0:
+            test_results = test_uniform_distribution(counts)
+            chi2 = test_results["chi2"]
+            p_val = test_results["p_value"]
+
+            # Print current step uniformity test results
+            print(
+                f"Step {total_trials}: chi²={chi2:.4f}, p={p_val:.6f} - "
+                + f"{'Reject' if p_val < 0.05 else 'Cannot reject'} uniformity"
+            )
         else:
+            test_results = None
             chi2, p_val = 0, 1.0
+
+        # Calculate the full distribution analysis
+        analysis = analyze_distribution(counts) if sum(counts.values()) > 0 else None
 
         # Calculate entropy using shared utility
         probs_list = [probabilities[rel] for rel in ALLEN_RELATION_ORDER]
@@ -111,19 +125,33 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
                 "probabilities": probabilities,
                 "chi2": chi2,
                 "p_value": p_val,
-                "entropy": entropy_val,
-                "most_common": most_common_rel,
-                "least_common": least_common_rel,
+                "entropy": analysis["entropy"] if analysis else 0,
+                "most_common": analysis["most_common"] if analysis else (None, 0),
+                "least_common": analysis["least_common"] if analysis else (None, 0),
                 "step_duration": step_duration,
                 "elapsed_time": time.time() - start_time,
+                "analysis": analysis,
+                "test_results": test_results,
             }
         )
+
+    # Run final uniformity test on complete simulation
+    final_analysis = analyze_distribution(counts)
+    final_test_results = final_analysis["uniformity_test"]
+    final_chi2 = final_test_results["chi2"]
+    final_p_val = final_test_results["p_value"]
+
+    print(f"\nFinal results after {total_trials} trials:")
+    print(f"Uniformity test: chi²={final_chi2:.4f}, p={final_p_val:.6f}")
+    print(f"{final_test_results['conclusion']}")
 
     return {
         "params": {"pBorn": pBorn, "pDie": pDie},
         "frames": frames,
         "final_counts": counts,
         "final_probabilities": probabilities,
+        "final_analysis": final_analysis,
+        "final_test_results": final_test_results,
         "total_duration": time.time() - start_time,
     }
 
@@ -626,6 +654,14 @@ if __name__ == "__main__":
     print("Running test simulation...")
     set_random_seed(42)
     data = run_simulation_in_steps(0.1, 0.1, 1000, 100)
+
+    # Print the final uniformity test results
+    chi2, p_val = data["final_uniformity_test"]
+    print(f"\nFinal uniformity test results:")
+    print(f"chi²={chi2:.4f}, p-value={p_val:.6f}")
+    print(
+        f"{'Reject' if p_val < 0.05 else 'Cannot reject'} uniform distribution hypothesis"
+    )
 
     print("Creating test visualization...")
     fig = create_distribution_chart(data)

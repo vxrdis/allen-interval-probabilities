@@ -25,10 +25,15 @@ import scipy.stats as stats
 
 # Import shared utilities
 from shared_utils import calculate_shannon_entropy, normalize_counts
+from analysis_utils import (
+    test_uniform_distribution,
+    calculate_expected_frequencies,
+    analyze_distribution,
+)
 
 
 def generate_parameter_surface_data(
-    p_values, selected_relation=None, trials_per_point=500
+    p_values, selected_relation=None, trials_per_point=500, print_results=False
 ):
     """
     Generate simulation data across a grid of birth/death probability parameters.
@@ -41,6 +46,7 @@ def generate_parameter_surface_data(
         p_values: List of probability values to use for both pBorn and pDie
         selected_relation: The specific Allen relation to track (default: 'e' for equals)
         trials_per_point: Number of simulation trials for each parameter combination
+        print_results: Whether to print uniformity test results for each point
 
     Returns:
         Dictionary with grid data for 3D surface plotting
@@ -89,9 +95,6 @@ def generate_parameter_surface_data(
 
                 # Calculate chi-square statistic for uniformity test
                 observed = [counts[rel] for rel in ALLEN_RELATION_ORDER]
-                expected = [total_count / len(ALLEN_RELATION_ORDER)] * len(
-                    ALLEN_RELATION_ORDER
-                )
 
                 # Calculate entropy of the distribution
                 prob_values = list(probs.values())
@@ -100,12 +103,22 @@ def generate_parameter_surface_data(
 
                 # Handle case where not enough data for chi-square test
                 if total_count >= 13:  # At least one expected sample per category
-                    chi2, p_val = stats.chisquare(observed, expected)
-                    chi2_grid[i, j] = chi2
-                    p_value_grid[i, j] = p_val
+                    test_results = test_uniform_distribution(counts)
+                    chi2_grid[i, j] = test_results["chi2"]
+                    p_value_grid[i, j] = test_results["p_value"]
+
+                    if print_results:
+                        print(
+                            f"Point ({pBorn:.3f}, {pDie:.3f}): chi²={test_results['chi2']:.4f}, p={test_results['p_value']:.6f} - "
+                            + f"{test_results['conclusion']}"
+                        )
 
             # Track progress
             completed_points += 1
+            if completed_points % 5 == 0 or completed_points == total_points:
+                print(
+                    f"Progress: {completed_points}/{total_points} points computed ({completed_points/total_points*100:.1f}%)"
+                )
 
     # Calculate elapsed time
     elapsed_time = time.time() - start_time
@@ -395,7 +408,10 @@ if __name__ == "__main__":
 
     # Generate surface data for the 'equals' relation
     surface_data = generate_parameter_surface_data(
-        test_p_values, selected_relation="e", trials_per_point=300  # equals relation
+        test_p_values,
+        selected_relation="e",
+        trials_per_point=300,  # equals relation
+        print_results=True,  # Print uniformity test results
     )
 
     print(

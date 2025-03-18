@@ -23,6 +23,13 @@ from relations import (
     identify_relation,  # Import the identify_relation function
 )
 from shared_utils import normalize_counts
+from analysis_utils import (
+    test_uniform_distribution,
+    print_uniformity_test_results,
+    perform_uniformity_test,
+    analyze_distribution,
+    format_uniformity_test_results,
+)
 
 
 # Replace global dictionaries with a registry class
@@ -145,15 +152,20 @@ class IntervalSimulator:
 
         return self
 
-    def simulate(self):
+    def simulate(self, test_uniformity=False, print_results=False):
         """
         Run Allen relation simulation with the specified parameters.
 
         This method simulates interval state transitions and counts the
         occurrences of each Allen relation type.
 
+        Args:
+            test_uniformity: Whether to test the result distribution for uniformity
+            print_results: Whether to print the uniformity test results
+
         Returns:
-            Dictionary of relation frequencies
+            If test_uniformity is False: Dictionary of relation frequencies
+            If test_uniformity is True: Tuple of (freq_dict, test_results_dict)
         """
         redRuns = self._simulate_intervals()
         dic = self._score_runs(redRuns)
@@ -162,6 +174,15 @@ class IntervalSimulator:
         # Update instance tally
         self._update_tally(dic)
         self.simulation_count += 1
+
+        # Test for uniform distribution if requested
+        if test_uniformity:
+            test_results = test_uniform_distribution(dic)
+
+            if print_results:
+                print_uniformity_test_results(test_results)
+
+            return dic, test_results
 
         return dic
 
@@ -243,25 +264,25 @@ class IntervalSimulator:
         Test whether the observed relation distribution follows a uniform distribution.
 
         Returns:
-            Tuple of (chi2_stat, p_value)
+            Dictionary containing test results (see analysis_utils.test_uniform_distribution)
         """
         if self.results is None:
             self.simulate()
 
-        counts = [self.results[rel] for rel in ALLEN_RELATION_ORDER]
-        total = sum(counts)
+        return test_uniform_distribution(self.results)
 
-        if total == 0:
-            print("  Not enough data for hypothesis testing")
-            return None, None
+    def get_distribution_analysis(self):
+        """
+        Get a comprehensive analysis of the simulation results distribution.
 
-        # Expected frequencies under uniform distribution
-        expected = [total / len(ALLEN_RELATION_ORDER)] * len(ALLEN_RELATION_ORDER)
+        Returns:
+            Dictionary containing analysis results including counts, probabilities,
+            uniformity test, entropy, and other statistics.
+        """
+        if self.results is None:
+            self.simulate()
 
-        # Chi-square test for uniform distribution
-        chi2, p_value = stats.chisquare(counts, expected)
-
-        return chi2, p_value
+        return analyze_distribution(self.results)
 
     def print_distribution(self):
         """Print the distribution of Allen relations in a readable format."""
@@ -269,24 +290,16 @@ class IntervalSimulator:
             self.simulate()
 
         print(f"\nDistribution for pBorn={self.pBorn}, pDie={self.pDie}:")
-        print_distribution(self.results)
 
-        # Also print hypothesis test results
-        chi2, p_value = self.test_uniform_distribution()
-        if chi2 is not None:
-            print("\n  Uniform Distribution Hypothesis Test:")
-            print("  ----------------------------------")
-            print(f"  Chi-square statistic: {chi2:.4f}")
-            print(f"  p-value: {p_value:.8f}")
+        # Get the distribution analysis and print formatted results
+        analysis = self.get_distribution_analysis()
+        result_str = format_distribution_results(analysis)
+        print(result_str)
 
-            if p_value < 0.05:
-                print(
-                    "  Conclusion: Reject null hypothesis (relations are NOT uniformly distributed)"
-                )
-            else:
-                print(
-                    "  Conclusion: Fail to reject null hypothesis (relations may be uniformly distributed)"
-                )
+        # Print uniformity test results
+        print_uniformity_test_results(analysis["uniformity_test"])
+
+        return analysis
 
     def _update_tally(self, results_dict):
         """
@@ -569,8 +582,19 @@ def demo(use_seed=True, trials=10000):
     for pBorn, pDie in configs:
         # Create and use simulator
         simulator = IntervalSimulator(pBorn, pDie, trials)
-        simulator.simulate()
-        simulator.print_distribution()
+        result, test_results = simulator.simulate(
+            test_uniformity=True, print_results=False
+        )
+
+        # Print distribution and test results
+        analysis = simulator.get_distribution_analysis()
+        print(format_distribution_results(analysis))
+        print(format_uniformity_test_results(test_results))
+
+        print(
+            f"\n  Uniformity Test: chi²={test_results['chi2']:.4f}, p={test_results['p_value']:.6f}"
+        )
+        print(f"  {test_results['conclusion']}\n")
         simulators.append(simulator)
 
     # Generate and display composition table for a specific config
@@ -611,7 +635,7 @@ def demo(use_seed=True, trials=10000):
 
 
 # Updated versions of functions to use the simulator registry
-def arSimulate(probBorn, probDie, trials):
+def arSimulate(probBorn, probDie, trials, test_uniformity=False, print_results=False):
     """
     Run Allen relation simulation with specified birth/death probabilities.
 
@@ -621,13 +645,18 @@ def arSimulate(probBorn, probDie, trials):
         probBorn: Probability of transition from unborn to alive
         probDie: Probability of transition from alive to dead
         trials: Number of trials to run
+        test_uniformity: Whether to test the result distribution for uniformity
+        print_results: Whether to print the uniformity test results
 
     Returns:
-        Dictionary of relation frequencies
+        If test_uniformity is False: Dictionary of relation frequencies
+        If test_uniformity is True: Tuple of (freq_dict, test_results_dict)
     """
     # Get existing simulator or create a new one
     simulator = registry.get_or_create_simulator(probBorn, probDie, trials)
-    return simulator.simulate()
+    return simulator.simulate(
+        test_uniformity=test_uniformity, print_results=print_results
+    )
 
 
 def talProb():
@@ -775,15 +804,21 @@ def probDic(dic, trials):
 
 def print_distribution(dic):
     """
-    Print the distribution of Allen relations in a readable format.
+    Get a formatted representation of the Allen relation distribution.
 
     Args:
         dic: Dictionary of relation frequencies
+
+    Returns:
+        Dictionary containing analysis results and formatted string representation
     """
-    total = sum(dic.values())
+    analysis = analyze_distribution(dic)
+
+    # Print the formatted results
+    total = analysis["total_observations"]
     if total == 0:
         print("  No data to display (zero total)")
-        return
+        return analysis
 
     print("  Allen Relation Distribution:")
     print("  ---------------------------")
@@ -800,47 +835,47 @@ def print_distribution(dic):
     print("  ---------------------------")
     print(f"  Total                {total:5}     1.000000")
 
+    return analysis
 
-def test_uniform_distribution(dic):
+
+def format_distribution_results(analysis):
     """
-    Test whether the observed relation distribution follows a uniform distribution.
-
-    This function is kept for backward compatibility.
+    Format distribution analysis results as a readable string.
 
     Args:
-        dic: Dictionary of relation frequencies
+        analysis: Dictionary from analyze_distribution()
 
     Returns:
-        Tuple of (chi2_stat, p_value)
+        Formatted string representation of distribution results
     """
-    counts = [dic[rel] for rel in ALLEN_RELATION_ORDER]
-    total = sum(counts)
+    result = "  Allen Relation Distribution:\n"
+    result += "  ---------------------------\n"
+    result += "  Relation            Count     Probability\n"
+    result += "  ---------------------------\n"
 
-    if total == 0:
-        print("  Not enough data for hypothesis testing")
-        return None, None
+    total = analysis["total_observations"]
 
-    # Expected frequencies under uniform distribution
-    expected = [total / len(ALLEN_RELATION_ORDER)] * len(ALLEN_RELATION_ORDER)
+    # Format each relation's statistics
+    for rel in ALLEN_RELATION_ORDER:
+        count = analysis["counts"][rel]
+        prob = analysis["probabilities"][rel]
+        name = get_relation_name(rel)
+        result += f"  {rel}: {name:<15} {count:5}     {prob:.6f}\n"
 
-    # Chi-square test for uniform distribution
-    chi2, p_value = stats.chisquare(counts, expected)
+    result += "  ---------------------------\n"
+    result += f"  Total                {total:5}     1.000000\n"
 
-    print("\n  Uniform Distribution Hypothesis Test:")
-    print("  ----------------------------------")
-    print(f"  Chi-square statistic: {chi2:.4f}")
-    print(f"  p-value: {p_value:.8f}")
+    # Add entropy information
+    result += f"\n  Shannon entropy: {analysis['entropy']:.4f} bits\n"
 
-    if p_value < 0.05:
-        print(
-            "  Conclusion: Reject null hypothesis (relations are NOT uniformly distributed)"
-        )
-    else:
-        print(
-            "  Conclusion: Fail to reject null hypothesis (relations may be uniformly distributed)"
-        )
+    # Add most/least common information
+    most_common = analysis["most_common"]
+    least_common = analysis["least_common"]
 
-    return chi2, p_value
+    result += f"  Most common: {most_common['label']} ({get_relation_name(most_common['label'])}): {most_common['probability']:.4f}\n"
+    result += f"  Least common: {least_common['label']} ({get_relation_name(least_common['label'])}): {least_common['probability']:.4f}\n"
+
+    return result
 
 
 def checkSum(dic):
