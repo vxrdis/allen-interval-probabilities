@@ -233,7 +233,75 @@ def create_parameter_surface_controls():
             ],
             style={"marginBottom": "15px"},
         ),
-        # ...existing controls...
+        # Add missing components that are referenced in callbacks
+        html.Div(
+            [
+                html.Label("Allen Relation:"),
+                dcc.Dropdown(
+                    id="surface-relation",
+                    options=[
+                        {"label": f"{rel} ({get_relation_name(rel)})", "value": rel}
+                        for rel in ALLEN_RELATION_ORDER
+                    ],
+                    value="e",  # Default to equals relation
+                    clearable=False,
+                ),
+            ],
+            style={"marginBottom": "15px"},
+        ),
+        html.Div(
+            [
+                html.Label("Grid Resolution:"),
+                dcc.Slider(
+                    id="grid-resolution",
+                    min=5,
+                    max=20,
+                    step=1,
+                    value=10,
+                    marks={i: str(i) for i in range(5, 21, 5)},
+                    tooltip={"placement": "bottom", "always_visible": True},
+                ),
+            ],
+            style={"marginBottom": "15px"},
+        ),
+        html.Div(
+            [
+                html.Label("Trials per point:"),
+                dcc.Input(
+                    id="surface-trials",
+                    type="number",
+                    min=100,
+                    max=10000,
+                    step=100,
+                    value=500,
+                    style={"width": "100%"},
+                ),
+            ],
+            style={"marginBottom": "15px"},
+        ),
+        # Generate button
+        html.Button(
+            "Generate Surface",
+            id="generate-surface",
+            style={
+                "width": "100%",
+                "padding": "10px",
+                "backgroundColor": "#3498db",
+                "color": "white",
+                "border": "none",
+                "borderRadius": "5px",
+                "cursor": "pointer",
+                "marginTop": "10px",
+            },
+        ),
+        # Status indicator
+        html.Div(
+            id="surface-status",
+            children=["Ready to generate."],
+            style={"marginTop": "15px"},
+        ),
+        # Hidden storage component for data
+        dcc.Store(id="surface-data"),
     ]
 
     # Use standardized control panel format

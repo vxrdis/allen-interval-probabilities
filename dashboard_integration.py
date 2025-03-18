@@ -1202,6 +1202,57 @@ def create_integrated_dashboard():
     return app
 
 
+# Add a debug helper function
+
+
+def debug_simulation(pborn=0.3, pdie=0.3, trials=100):
+    """Helper function to debug simulation issues"""
+    from simulations import IntervalSimulator
+
+    print(f"Running debug simulation with pBorn={pborn}, pDie={pdie}, trials={trials}")
+
+    # Create simulator
+    simulator = IntervalSimulator(pborn, pdie, trials)
+
+    # Run simulation with direct debug tracking
+    histories = simulator._simulate_intervals()
+
+    # Check the histories
+    print(f"Generated {len(histories)} histories")
+
+    # Check the first few histories
+    for i, history in enumerate(histories[:5]):
+        print(f"History {i}: {history}")
+
+        # Try to identify relation
+        relation = simulator._get_relation_code(history)
+        if relation:
+            print(f"  Identified as relation: {relation}")
+        else:
+            print(f"  No relation identified")
+
+    # Run the simulation normally
+    results = simulator.simulate()
+
+    # Check results
+    total = sum(results.values())
+    print(f"Total relations identified: {total} out of {trials} trials")
+
+    # Show distribution
+    if total > 0:
+        for rel, count in results.items():
+            if count > 0:
+                print(f"  {rel}: {count} ({count/total:.2%})")
+    else:
+        print("  No relations were identified!")
+
+    return results
+
+
+# Add this at the end of your file or in your main section
+if __name__ == "__main__":
+    debug_simulation()
+
 if __name__ == "__main__":
     print("Initializing Allen's Interval Algebra Interactive Dashboard...")
 

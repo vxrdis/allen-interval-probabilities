@@ -18,7 +18,7 @@ import plotly.graph_objects as go
 
 # Import from our modules
 from relations import ALLEN_RELATION_ORDER, get_relation_name
-from simulations import simulateRed, arCode, set_random_seed
+from simulations import simulateRed, arCode, set_random_seed, IntervalSimulator
 from constants import ALLEN_RELATION_ORDER, RELATION_COLOURS, get_relation_name
 from analysis_utils import (
     test_uniform_distribution,
@@ -84,21 +84,27 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
         # Determine number of trials for this step
         current_step = min(step_size, max_trials - total_trials)
 
-        # Run simulation for this step
-        histories = simulateRed(pBorn, pDie, current_step)
+        # Run simulation for this step - FIX: Directly use IntervalSimulator instead of simulateRed
+        simulator = IntervalSimulator(pBorn, pDie, current_step)
+        step_results = simulator.simulate()
 
-        # Update counts based on relation occurrences
-        for history in histories:
-            relation = arCode(history)
-            if relation:
-                counts_array[relation_indices[relation]] += 1
+        # Update counts based on relation occurrences in results
+        for rel, count in step_results.items():
+            counts_array[relation_indices[rel]] += count
 
         total_trials += current_step
 
         # Calculate probabilities
         frame_counts[frame_idx] = counts_array.copy()
         total_count = np.sum(counts_array)
-        frame_probs[frame_idx] = counts_array / total_count if total_count > 0 else 0
+
+        # Debug output to identify if counts are being updated
+        print(f"Step {frame_idx+1}: Total count = {total_count}")
+
+        if total_count > 0:
+            frame_probs[frame_idx] = counts_array / total_count
+        else:
+            frame_probs[frame_idx] = 0  # Avoid division by zero
 
         # Store trial count
         frame_trials[frame_idx] = total_trials
@@ -111,15 +117,20 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
             }
             test_results = test_uniform_distribution(counts_dict)
 
-            # Store results in arrays
-            frame_chi2[frame_idx] = test_results["chi2"]
-            frame_pvals[frame_idx] = test_results["p_value"]
+            if test_results:  # Add check to ensure test_results is not None
+                # Store results in arrays
+                frame_chi2[frame_idx] = test_results["chi2"]
+                frame_pvals[frame_idx] = test_results["p_value"]
 
-            # Print current step uniformity test results
-            print(
-                f"Step {total_trials}: chi²={test_results['chi2']:.4f}, p={test_results['p_value']:.6f} - "
-                + f"{'Reject' if test_results['p_value'] < 0.05 else 'Cannot reject'} uniformity"
-            )
+                # Print current step uniformity test results
+                print(
+                    f"Step {total_trials}: chi²={test_results['chi2']:.4f}, p={test_results['p_value']:.6f} - "
+                    + f"{'Reject' if test_results['p_value'] < 0.05 else 'Cannot reject'} uniformity"
+                )
+            else:
+                print(f"Step {total_trials}: Not enough data for uniformity test")
+                frame_chi2[frame_idx] = 0
+                frame_pvals[frame_idx] = 1.0
 
             # Calculate entropy from probabilities
             non_zero_probs = frame_probs[frame_idx][frame_probs[frame_idx] > 0]
@@ -147,12 +158,20 @@ def run_simulation_in_steps(pBorn, pDie, max_trials, step_size=100):
     }
     final_analysis = analyze_distribution(final_counts_dict)
     final_test_results = final_analysis["uniformity_test"]
-    final_chi2 = final_test_results["chi2"]
-    final_p_val = final_test_results["p_value"]
 
-    print(f"\nFinal results after {total_trials} trials:")
-    print(f"Uniformity test: chi²={final_chi2:.4f}, p={final_p_val:.6f}")
-    print(f"{final_test_results['conclusion']}")
+    # Handle the case where uniformity test returns None (not enough data)
+    if final_test_results is None:
+        final_chi2 = 0
+        final_p_val = 1.0
+        conclusion = "Not enough data for uniformity test"
+        print(f"\nFinal results after {total_trials} trials: {conclusion}")
+    else:
+        final_chi2 = final_test_results["chi2"]
+        final_p_val = final_test_results["p_value"]
+        conclusion = final_test_results["conclusion"]
+        print(f"\nFinal results after {total_trials} trials:")
+        print(f"Uniformity test: chi²={final_chi2:.4f}, p={final_p_val:.6f}")
+        print(f"{conclusion}")
 
     # Convert the NumPy array data back to frame dictionaries for compatibility with existing code
     frames = []

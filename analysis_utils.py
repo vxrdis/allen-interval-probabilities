@@ -227,6 +227,18 @@ def analyze_distribution(counts_dict):
     # Get total observations
     total = sum(counts_dict.values())
 
+    # Early return for empty distributions
+    if total == 0:
+        return {
+            "counts": dict(counts_dict),
+            "probabilities": probs,
+            "total_observations": 0,
+            "most_common": {"label": None, "count": 0, "probability": 0},
+            "least_common": {"label": None, "count": 0, "probability": 0},
+            "entropy": 0,
+            "uniformity_test": None,
+        }
+
     # Identify most and least common categories
     most_common = (
         max(counts_dict.items(), key=lambda x: x[1]) if counts_dict else (None, 0)
@@ -235,8 +247,8 @@ def analyze_distribution(counts_dict):
         min(counts_dict.items(), key=lambda x: x[1]) if counts_dict else (None, 0)
     )
 
-    # Calculate entropy
-    entropy = calculate_shannon_entropy(list(probs.values())) if probs else 0
+    # Calculate entropy - safe to call now that we've handled the empty case
+    entropy = calculate_shannon_entropy(list(probs.values())) if total > 0 else 0
 
     # Perform uniformity test
     uniformity_test = test_uniform_distribution(counts_dict)

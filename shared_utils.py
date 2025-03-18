@@ -15,28 +15,55 @@ import numpy as np
 from scipy.stats import entropy as scipy_entropy
 
 
-def calculate_shannon_entropy(distribution):
+def calculate_shannon_entropy(probabilities):
     """
-    Calculate Shannon entropy of a probability distribution.
+    Calculate the Shannon entropy of a probability distribution.
+
+    Shannon entropy measures the average information content or uncertainty
+    in a probability distribution, defined as:
+    H(X) = -sum(p_i * log2(p_i)) for all probabilities p_i
 
     Args:
-        distribution: List or dictionary of probabilities
+        probabilities: List or array of probability values that sum to 1
 
     Returns:
-        Entropy value (higher means more uncertainty)
+        Shannon entropy in bits (using log base 2)
+
+    Raises:
+        ValueError: If input is empty or probabilities don't sum to approximately 1
+                   (except for the special case of all zeros)
     """
-    # If passed a dictionary, extract values
-    if isinstance(distribution, dict):
-        distribution = list(distribution.values())
+    import numpy as np
 
-    # Make sure the distribution is normalized and contains no zeros
-    distribution = np.array(distribution)
-    distribution = distribution[distribution > 0]
-    if len(distribution) == 0:
-        return 0
+    # Convert to numpy array for efficient computation
+    probs = np.array(probabilities)
 
-    distribution = distribution / np.sum(distribution)
-    return scipy_entropy(distribution, base=2)
+    # Check for empty input
+    if len(probs) == 0:
+        raise ValueError("Cannot calculate entropy of an empty distribution")
+
+    # Special case: All zeros - treat as a degenerate distribution with zero entropy
+    if np.sum(probs) == 0:
+        return 0.0
+
+    # Check if probabilities sum to approximately 1 (allowing for floating-point error)
+    if not np.isclose(np.sum(probs), 1.0, rtol=1e-5, atol=1e-8):
+        raise ValueError(f"Probabilities must sum to 1.0, got {np.sum(probs)}")
+
+    # Filter out zero probabilities (0 * log(0) = 0 by convention in information theory)
+    # This avoids log(0) which would be -infinity
+    non_zero = probs > 0
+
+    # Special case for distributions with only one non-zero probability
+    # These have zero entropy (no uncertainty)
+    if np.sum(non_zero) <= 1:
+        return 0.0
+
+    # Calculate entropy using only non-zero probabilities
+    filtered_probs = probs[non_zero]
+    entropy = -np.sum(filtered_probs * np.log2(filtered_probs))
+
+    return float(entropy)  # Convert from numpy type to native Python float
 
 
 def normalize_counts(counts):

@@ -228,8 +228,8 @@ class SimulationCache:
 
         # Prepare data structure with metadata
         data = {
-            "results": results,
-            "test_results": test_results,
+            "results": self._convert_numpy_types(results),
+            "test_results": self._convert_numpy_types(test_results),
             "metadata": {
                 "pBorn": pBorn,
                 "pDie": pDie,
@@ -255,6 +255,33 @@ class SimulationCache:
                 pass
 
         return key
+
+    def _convert_numpy_types(self, obj):
+        """
+        Recursively convert NumPy types to Python native types for JSON serialization.
+
+        Args:
+            obj: The object to convert
+
+        Returns:
+            Object with NumPy types converted to Python native types
+        """
+        import numpy as np
+
+        if obj is None:
+            return None
+        elif isinstance(obj, (np.integer, np.int32, np.int64)):
+            return int(obj)
+        elif isinstance(obj, (np.floating, np.float32, np.float64)):
+            return float(obj)
+        elif isinstance(obj, (np.ndarray,)):
+            return self._convert_numpy_types(obj.tolist())
+        elif isinstance(obj, (list, tuple)):
+            return [self._convert_numpy_types(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: self._convert_numpy_types(value) for key, value in obj.items()}
+        else:
+            return obj
 
     def _add_to_memory_cache(self, key, data):
         """Add an entry to the memory cache with LRU tracking."""
@@ -801,6 +828,9 @@ class IntervalSimulator:
         # 1. Time to transition from unborn (0) to alive (1) for both intervals
         # 2. Time to transition from alive (1) to dead (2) for both intervals
 
+        # Use appropriate random seed for reproducibility
+        np.random.seed(42)  # Add explicit seed
+
         # Sample from geometric distribution to get transition times
         # Note: numpy's geometric starts from 1, so we subtract 1 to start from 0
         if self.pBorn > 0:
@@ -808,7 +838,6 @@ class IntervalSimulator:
             unborn_to_alive_b = np.random.geometric(self.pBorn, self.trials) - 1
         else:
             # If pBorn is 0, the intervals never transition to alive (they remain unborn forever)
-            # This is a degenerate case, but we'll handle it by setting to infinity
             unborn_to_alive_a = np.full(self.trials, np.inf)
             unborn_to_alive_b = np.full(self.trials, np.inf)
 
@@ -817,7 +846,6 @@ class IntervalSimulator:
             alive_to_dead_b = np.random.geometric(self.pDie, self.trials) - 1
         else:
             # If pDie is 0, the intervals never transition to dead (they remain alive forever)
-            # This is also a degenerate case, but we'll handle it for completeness
             alive_to_dead_a = np.full(self.trials, np.inf)
             alive_to_dead_b = np.full(self.trials, np.inf)
 
@@ -826,6 +854,13 @@ class IntervalSimulator:
         time_alive_b = unborn_to_alive_b
         time_dead_a = time_alive_a + alive_to_dead_a
         time_dead_b = time_alive_b + alive_to_dead_b
+
+        # Debug output for the first few simulations
+        print(f"First 5 simulation times:")
+        for i in range(min(5, self.trials)):
+            print(
+                f"  Trial {i}: A({time_alive_a[i]},{time_dead_a[i]}), B({time_alive_b[i]},{time_dead_b[i]})"
+            )
 
         # Reconstruct histories from transition times
         histories = []
@@ -972,7 +1007,9 @@ class IntervalSimulator:
         from relations import l, r  # Import endpoint identifier functions
 
         la, ra = l("a"), r("a")  # Endpoints for interval a
-        lb, rb = l("b")  # Endpoints for interval b
+        lb, rb = l("b"), r(
+            "b"
+        )  # Endpoints for interval b - FIX: Use correct variable name
 
         # Direct mappings from histories to endpoint configurations
         if Hist == [[0, 0], [1, 1], [2, 2]]:
@@ -1016,6 +1053,8 @@ class IntervalSimulator:
                 {ra, rb},
             ]  # Finished-by (F): la<lb, ra=rb (inverse of f)
 
+        # Add logging for debugging
+        print(f"Warning: No relation mapping found for history: {Hist}")
         return None  # No match
 
     def save_results_to_file(self, filename):
