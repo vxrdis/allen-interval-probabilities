@@ -395,6 +395,15 @@ class IntervalSimulator:
         """
         Convert a state transition history to an endpoint sequence for identify_relation.
 
+        The mappings preserve the inverse relation pattern from Alspaugh's notation:
+        - p (precedes) <-> P (preceded-by): Swapping intervals reverses the relation
+        - m (meets) <-> M (met-by): Swapping intervals reverses the relation
+        - o (overlaps) <-> O (overlapped-by): Swapping intervals reverses the relation
+        - F (finished-by) <-> f (finishes): Swapping intervals reverses the relation
+        - D (contains) <-> d (during): Swapping intervals reverses the relation
+        - s (starts) <-> S (started-by): Swapping intervals reverses the relation
+        - e (equals) <-> e (equals): Self-inverse (symmetric relation)
+
         Args:
             Hist: History of state transitions like [[0, 0], [1, 1], [2, 2]]
 
@@ -410,31 +419,45 @@ class IntervalSimulator:
 
         # Direct mappings from histories to endpoint configurations
         if Hist == [[0, 0], [1, 1], [2, 2]]:
-            return [{la, lb}, {ra, rb}]  # Equal (e): la=lb, ra=rb
+            return [{la, lb}, {ra, rb}]  # Equal (e): la=lb, ra=rb (self-inverse)
         elif Hist == [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]]:
-            return [{la}, {ra}, {lb}, {rb}]  # Before/Precedes (p): la<ra<lb<rb
+            return [
+                {la},
+                {ra},
+                {lb},
+                {rb},
+            ]  # Before/Precedes (p): la<ra<lb<rb (inverse of P)
         elif Hist == [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2]]:
-            return [{lb}, {rb}, {la}, {ra}]  # After (P): lb<rb<la<ra
+            return [{lb}, {rb}, {la}, {ra}]  # After (P): lb<rb<la<ra (inverse of p)
         elif Hist == [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2]]:
-            return [{la}, {lb}, {ra}, {rb}]  # Overlaps (o): la<lb<ra<rb
+            return [{la}, {lb}, {ra}, {rb}]  # Overlaps (o): la<lb<ra<rb (inverse of O)
         elif Hist == [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2]]:
-            return [{lb}, {la}, {rb}, {ra}]  # Overlapped-by (O): lb<la<rb<ra
+            return [
+                {lb},
+                {la},
+                {rb},
+                {ra},
+            ]  # Overlapped-by (O): lb<la<rb<ra (inverse of o)
         elif Hist == [[0, 0], [1, 0], [2, 1], [2, 2]]:
-            return [{la}, {ra, lb}, {rb}]  # Meets (m): la<(ra=lb)<rb
+            return [{la}, {ra, lb}, {rb}]  # Meets (m): la<(ra=lb)<rb (inverse of M)
         elif Hist == [[0, 0], [0, 1], [1, 2], [2, 2]]:
-            return [{lb}, {rb, la}, {ra}]  # Met-by (M): lb<(rb=la)<ra
+            return [{lb}, {rb, la}, {ra}]  # Met-by (M): lb<(rb=la)<ra (inverse of m)
         elif Hist == [[0, 0], [0, 1], [1, 1], [2, 1], [2, 2]]:
-            return [{lb}, {la}, {ra}, {rb}]  # During (d): lb<la<ra<rb
+            return [{lb}, {la}, {ra}, {rb}]  # During (d): lb<la<ra<rb (inverse of D)
         elif Hist == [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2]]:
-            return [{la}, {lb}, {rb}, {ra}]  # Contains (D): la<lb<rb<ra
+            return [{la}, {lb}, {rb}, {ra}]  # Contains (D): la<lb<rb<ra (inverse of d)
         elif Hist == [[0, 0], [1, 1], [2, 1], [2, 2]]:
-            return [{la, lb}, {ra}, {rb}]  # Starts (s): la=lb, ra<rb
+            return [{la, lb}, {ra}, {rb}]  # Starts (s): la=lb, ra<rb (inverse of S)
         elif Hist == [[0, 0], [1, 1], [1, 2], [2, 2]]:
-            return [{la, lb}, {rb}, {ra}]  # Started-by (S): la=lb, rb<ra
+            return [{la, lb}, {rb}, {ra}]  # Started-by (S): la=lb, rb<ra (inverse of s)
         elif Hist == [[0, 0], [0, 1], [1, 1], [2, 2]]:
-            return [{lb}, {la}, {ra, rb}]  # Finishes (f): lb<la, ra=rb
+            return [{lb}, {la}, {ra, rb}]  # Finishes (f): lb<la, ra=rb (inverse of F)
         elif Hist == [[0, 0], [1, 0], [1, 1], [2, 2]]:
-            return [{la}, {lb}, {ra, rb}]  # Finished-by (F): la<lb, ra=rb
+            return [
+                {la},
+                {lb},
+                {ra, rb},
+            ]  # Finished-by (F): la<lb, ra=rb (inverse of f)
 
         return None  # No match
 

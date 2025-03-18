@@ -56,6 +56,13 @@ def get_inverse_relation(rel_code):
     """
     Get the inverse of a relation using Alspaugh's uppercase/lowercase pairing.
 
+    Inverse relations follow a systematic pattern in Alspaugh's notation:
+    - Lowercase and uppercase versions of the same letter are inverses of each other
+      (e.g., p <-> P, m <-> M, o <-> O, s <-> S, d <-> D, f <-> F)
+    - The 'equals' relation (e) is its own inverse
+
+    This pattern makes inverses easy to compute by simply changing case.
+
     Args:
         rel_code: Relation code to find inverse for
 
@@ -64,9 +71,9 @@ def get_inverse_relation(rel_code):
     """
     if rel_code == "e":  # equals is self-inverse
         return "e"
-    elif rel_code.islower():  # lowercase -> uppercase inverse
+    elif rel_code.islower():  # lowercase -> uppercase inverse (e.g., p -> P)
         return rel_code.upper()
-    elif rel_code.isupper():  # uppercase -> lowercase inverse
+    elif rel_code.isupper():  # uppercase -> lowercase inverse (e.g., P -> p)
         return rel_code.lower()
     else:
         return None
@@ -82,6 +89,16 @@ def allen_relation(x, y, rel):
     Each relation is represented as a sequence of endpoint events, where:
     - l(x): left endpoint of interval x
     - r(x): right endpoint of interval x
+
+    The 13 Allen relations form 6 pairs of inverses plus the self-inverse "equals" relation.
+    In Alspaugh's notation, inverses are represented by case transformation:
+    - p (precedes) <-> P (preceded-by / after)
+    - m (meets) <-> M (met-by)
+    - o (overlaps) <-> O (overlapped-by)
+    - F (finished-by) <-> f (finishes)
+    - D (contains) <-> d (during)
+    - s (starts) <-> S (started-by)
+    - e (equals) is its own inverse
 
     Args:
         x: First interval identifier
@@ -99,45 +116,45 @@ def allen_relation(x, y, rel):
 
     # Define all 13 Allen relations using endpoint configurations with Alspaugh's codes
     relations = {
-        # Basic relations (following Alspaugh's order)
+        # Basic relations (following Alspaugh's order with inverses noted)
         "p": [{lx}, {rx}, {ly}, {ry}],
-        # p (precedes): x entirely precedes y
+        # p (precedes): x entirely precedes y (inverse: P - preceded-by)
         # Endpoint order: lx < rx < ly < ry
         "m": [{lx}, {rx, ly}, {ry}],
-        # m (meets): x's right endpoint coincides with y's left endpoint
+        # m (meets): x's right endpoint coincides with y's left endpoint (inverse: M - met-by)
         # Endpoint order: lx < (rx = ly) < ry
         "o": [{lx}, {ly}, {rx}, {ry}],
-        # o (overlaps): x starts before y, they overlap, and x ends before y ends
+        # o (overlaps): x starts before y, they overlap, and x ends before y ends (inverse: O - overlapped-by)
         # Endpoint order: lx < ly < rx < ry
         "F": [{lx}, {ly}, {rx, ry}],
-        # F (finished-by): x starts before y, but they end at the same time
+        # F (finished-by): x starts before y, but they end at the same time (inverse: f - finishes)
         # Endpoint order: lx < ly < (rx = ry)
         "D": [{lx}, {ly}, {ry}, {rx}],
-        # D (contains): x fully contains y
+        # D (contains): x fully contains y (inverse: d - during)
         # Endpoint order: lx < ly < ry < rx
         "s": [{lx, ly}, {rx}, {ry}],
-        # s (starts): x and y start at the same time, but x ends before y
+        # s (starts): x and y start at the same time, but x ends before y (inverse: S - started-by)
         # Endpoint order: (lx = ly) < rx < ry
         "e": [{lx, ly}, {rx, ry}],
-        # e (equals): x and y are identical intervals
+        # e (equals): x and y are identical intervals (self-inverse)
         # Endpoint order: (lx = ly) < (rx = ry)
         "S": [{lx, ly}, {ry}, {rx}],
-        # S (started-by): x and y start at the same time, but y ends before x
+        # S (started-by): x and y start at the same time, but y ends before x (inverse: s - starts)
         # Endpoint order: (lx = ly) < ry < rx
         "d": [{ly}, {lx}, {rx}, {ry}],
-        # d (during): x is fully contained within y
+        # d (during): x is fully contained within y (inverse: D - contains)
         # Endpoint order: ly < lx < rx < ry
         "f": [{ly}, {lx}, {rx, ry}],
-        # f (finishes): x starts after y starts, but they end at the same time
+        # f (finishes): x starts after y starts, but they end at the same time (inverse: F - finished-by)
         # Endpoint order: ly < lx < (rx = ry)
         "O": [{ly}, {lx}, {ry}, {rx}],
-        # O (overlapped-by): y starts before x, they overlap, and y ends before x
+        # O (overlapped-by): y starts before x, they overlap, and y ends before x (inverse: o - overlaps)
         # Endpoint order: ly < lx < ry < rx
         "M": [{ly}, {ry, lx}, {rx}],
-        # M (met-by): y's right endpoint coincides with x's left endpoint
+        # M (met-by): y's right endpoint coincides with x's left endpoint (inverse: m - meets)
         # Endpoint order: ly < (ry = lx) < rx
         "P": [{ly}, {ry}, {lx}, {rx}],
-        # P (preceded-by/after): y entirely precedes x
+        # P (preceded-by/after): y entirely precedes x (inverse: p - precedes)
         # Endpoint order: ly < ry < lx < rx
     }
 
@@ -204,6 +221,10 @@ def identify_relation(endpoint_sequence, x, y):
 def are_inverse_relations(rel1, rel2):
     """
     Check if two relations are inverses of each other using Alspaugh's notation.
+
+    Inverse relations in Alspaugh's notation have opposite case:
+    - p <-> P, m <-> M, o <-> O, etc.
+    - e is self-inverse (e <-> e)
 
     Args:
         rel1: First relation code
@@ -469,12 +490,27 @@ if __name__ == "__main__":
 
     # Show all relations in Alspaugh's order
     print("Allen's 13 relations in Alspaugh's order:")
+    print("  Relation        Name           Inverse Relation")
+    print("  ---------------------------------------------")
     for rel in ALLEN_RELATION_ORDER:
         inverse = get_inverse_relation(rel)
         print(
-            f"  {rel}: {get_relation_name(rel):<12} (inverse: {inverse}: {get_relation_name(inverse)})"
+            f"  {rel:<2}: {get_relation_name(rel):<12} <-> {inverse}: {get_relation_name(inverse)}"
         )
     print()
+
+    # Check if all inverses are consistent
+    print("Verifying inverse relation consistency:")
+    all_consistent = True
+    for rel in ALLEN_RELATION_ORDER:
+        inverse = get_inverse_relation(rel)
+        if get_inverse_relation(inverse) != rel:
+            print(
+                f"  Inconsistency detected: {rel} <-> {inverse}, but {inverse} <-> {get_inverse_relation(inverse)}"
+            )
+            all_consistent = False
+    if all_consistent:
+        print("  All inverse relations are consistent!")
 
     # Example: Compute composition of "precedes" and "during"
     print("=" * 80)
