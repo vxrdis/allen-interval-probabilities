@@ -307,6 +307,24 @@ simulation_cache = SimulationCache(
 )
 
 
+# Define relation colors for visualization
+RELATION_COLOURS = {
+    "p": "blue",
+    "P": "lightblue",
+    "m": "green",
+    "M": "lightgreen",
+    "o": "orange",
+    "O": "lightorange",
+    "D": "red",
+    "d": "lightred",
+    "s": "purple",
+    "S": "lightpurple",
+    "f": "brown",
+    "F": "lightbrown",
+    "e": "gray",
+}
+
+
 class IntervalSimulator:
     def __init__(self, pBorn, pDie, trials, use_cache=True):
         """
@@ -1038,10 +1056,29 @@ class IntervalSimulator:
         probs = self.get_probabilities()
 
         plt.figure(figsize=(12, 6))
-        plt.bar(ALLEN_RELATION_ORDER, [probs[rel] for rel in ALLEN_RELATION_ORDER])
+        # Use ALLEN_RELATION_ORDER for consistent ordering
+        bars = plt.bar(
+            ALLEN_RELATION_ORDER,
+            [probs[rel] for rel in ALLEN_RELATION_ORDER],
+            color=[RELATION_COLOURS[rel] for rel in ALLEN_RELATION_ORDER],
+        )
         plt.axhline(
             y=1 / 13, color="r", linestyle="--", label="Uniform distribution (1/13)"
         )
+
+        # Add relation names as annotations for better readability
+        for i, rel in enumerate(ALLEN_RELATION_ORDER):
+            name = get_relation_name(rel)
+            plt.text(
+                i,
+                probs[rel] + 0.005,
+                name,
+                ha="center",
+                rotation=90,
+                fontsize=8,
+                color="darkblue",
+            )
+
         plt.xlabel("Allen Relations")
         plt.ylabel("Probability")
         plt.title(f"Allen Relation Distribution (pBorn={self.pBorn}, pDie={self.pDie})")

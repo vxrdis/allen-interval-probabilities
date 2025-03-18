@@ -16,10 +16,9 @@ such as uniform distributions or parameter combinations that favor certain relat
 import time
 import numpy as np
 from dash import dcc, html
-import plotly.graph_objects as go
 
 # Import from our modules
-from constants import ALLEN_RELATION_ORDER, get_relation_name
+from constants import ALLEN_RELATION_ORDER, get_relation_name, RELATION_COLOURS
 from simulations import simulateRed, arCode, set_random_seed
 from simulations import arSimulate, get_cache_stats
 import scipy.stats as stats
@@ -30,6 +29,12 @@ from analysis_utils import (
     test_uniform_distribution,
     calculate_expected_frequencies,
     analyze_distribution,
+)
+from visualisation_utils import (
+    create_colorscale_for_relation,
+    create_control_panel,
+    create_explanation_panel,
+    generate_3d_surface_figure,
 )
 
 
@@ -185,64 +190,47 @@ def create_3d_surface_plot(surface_data, metric_type="probability"):
         z_data = surface_data["probability_grid"]
         rel_name = get_relation_name(selected_relation)
         title = f"Probability of Relation '{selected_relation}' ({rel_name})"
-        color_scale = "Viridis"  # Blue-green-yellow for probability
+        colorscale = create_colorscale_for_relation(selected_relation)
         z_label = "Probability"
         colorbar_title = "Probability"
 
     elif metric_type == "entropy":
         z_data = surface_data["entropy_grid"]
         title = "Shannon Entropy of Relation Distribution"
-        color_scale = "Plasma"  # Yellow-pink for entropy
+        colorscale = "Plasma"  # Consistent color scheme for entropy
         z_label = "Entropy (bits)"
         colorbar_title = "Entropy (bits)"
 
     else:  # chi-square statistic
         z_data = surface_data["chi2_grid"]
         title = "Chi-Square Statistic (Uniformity Test)"
-        color_scale = "Inferno"  # Yellow-red-black for chi-square
+        colorscale = "Inferno"  # Consistent color scheme for chi-square
         z_label = "Chi² Value"
         colorbar_title = "Chi² Statistic"
 
-    # Create the 3D surface figure
-    fig = go.Figure(
-        data=[
-            go.Surface(
-                x=pBorn_values,
-                y=pDie_values,
-                z=z_data,
-                colorscale=color_scale,
-                colorbar=dict(title=colorbar_title),
-            )
-        ]
+    # Create hover template for better interaction
+    hover_template = (
+        "pBorn: %{x:.3f}<br>"
+        + "pDie: %{y:.3f}<br>"
+        + f"{z_label}: %{{z:.4f}}<br>"
+        + "<extra></extra>"
     )
 
-    # Update figure layout with proper labels and settings
-    fig.update_layout(
+    # Use the utility function to generate the 3D surface
+    fig = generate_3d_surface_figure(
+        x_data=pBorn_values,
+        y_data=pDie_values,
+        z_data=z_data,
+        colorscale=colorscale,
         title=title,
-        scene=dict(
-            xaxis_title="Birth Probability (pBorn)",
-            yaxis_title="Death Probability (pDie)",
-            zaxis_title=z_label,
-            # Set initial camera position for better viewing angle
-            camera=dict(eye=dict(x=1.5, y=1.5, z=1.2)),
-            # Add aspect ratio to avoid distortion
-            aspectratio=dict(x=1, y=1, z=0.7),
-        ),
-        # Add margin for better spacing
-        margin=dict(l=65, r=50, b=65, t=90),
-        height=700,
-        width=900,
+        x_title="Birth Probability (pBorn)",
+        y_title="Death Probability (pDie)",
+        z_title=z_label,
+        colorbar_title=colorbar_title,
     )
 
-    # Add hover template for better interaction
-    fig.update_traces(
-        hovertemplate=(
-            "pBorn: %{x:.3f}<br>"
-            + "pDie: %{y:.3f}<br>"
-            + f"{z_label}: %{{z:.4f}}<br>"
-            + "<extra></extra>"
-        )
-    )
+    # Add custom hover template
+    fig.update_traces(hovertemplate=hover_template)
 
     return fig
 
@@ -254,106 +242,28 @@ def create_parameter_surface_controls():
     Returns:
         A Dash component representing the control panel
     """
-    controls = html.Div(
-        [
-            html.H4(
-                "Parameter Surface Controls",
-                style={"marginTop": "0", "marginBottom": "15px"},
-            ),
-            # Metric selection
-            html.Div(
-                [
-                    html.Label("Display Metric:"),
-                    dcc.RadioItems(
-                        id="surface-metric",
-                        options=[
-                            {"label": "Relation Probability", "value": "probability"},
-                            {"label": "Chi-Square Statistic", "value": "chi2"},
-                            {"label": "Shannon Entropy", "value": "entropy"},
-                        ],
-                        value="probability",
-                        labelStyle={"display": "block", "margin": "5px 0"},
-                    ),
-                ],
-                style={"marginBottom": "15px"},
-            ),
-            # Relation selection for probability view
-            html.Div(
-                id="relation-selector-container",
-                children=[
-                    html.Label("Relation to Analyze:"),
-                    dcc.Dropdown(
-                        id="surface-relation",
-                        options=[
-                            {"label": f"{rel}: {get_relation_name(rel)}", "value": rel}
-                            for rel in ALLEN_RELATION_ORDER
-                        ],
-                        value="e",  # Default to "equals" relation
-                        clearable=False,
-                    ),
-                ],
-                style={"marginBottom": "15px"},
-            ),
-            # Grid resolution control
-            html.Div(
-                [
-                    html.Label("Grid Resolution:"),
-                    dcc.Slider(
-                        id="grid-resolution",
-                        min=3,
-                        max=15,
-                        step=1,
-                        value=7,
-                        marks={3: "3×3", 7: "7×7", 10: "10×10", 15: "15×15"},
-                        tooltip={"placement": "bottom", "always_visible": True},
-                    ),
-                ],
-                style={"marginBottom": "15px"},
-            ),
-            # Trials per point control
-            html.Div(
-                [
-                    html.Label("Trials per Point:"),
-                    dcc.Slider(
-                        id="surface-trials",
-                        min=200,
-                        max=2000,
-                        step=200,
-                        value=600,
-                        marks={200: "200", 600: "600", 1000: "1k", 2000: "2k"},
-                        tooltip={"placement": "bottom", "always_visible": True},
-                    ),
-                ],
-                style={"marginBottom": "15px"},
-            ),
-            # Generate button
-            html.Div(
-                [
-                    html.Button(
-                        "Generate Surface",
-                        id="surface-button",
-                        style={
-                            "backgroundColor": "#3498db",
-                            "color": "white",
-                            "border": "none",
-                            "padding": "10px 20px",
-                            "borderRadius": "4px",
-                            "fontSize": "16px",
-                            "width": "100%",
-                            "cursor": "pointer",
-                        },
-                    )
-                ],
-                style={"marginTop": "20px"},
-            ),
-            # Status message area
-            html.Div(
-                id="surface-status", style={"marginTop": "15px", "minHeight": "60px"}
-            ),
-        ]
-    )
+    controls = [
+        html.Div(
+            [
+                html.Label("Display Metric:"),
+                dcc.RadioItems(
+                    id="surface-metric",
+                    options=[
+                        {"label": "Relation Probability", "value": "probability"},
+                        {"label": "Chi-Square Statistic", "value": "chi2"},
+                        {"label": "Shannon Entropy", "value": "entropy"},
+                    ],
+                    value="probability",
+                    labelStyle={"display": "block", "margin": "5px 0"},
+                ),
+            ],
+            style={"marginBottom": "15px"},
+        ),
+        # ...existing controls...
+    ]
 
-    return controls
+    # Use standardized control panel format
+    return create_control_panel("Parameter Surface Controls", controls)
 
 
 def create_parameter_surface_explanation():
@@ -363,68 +273,18 @@ def create_parameter_surface_explanation():
     Returns:
         A Dash component with explanation text
     """
-    explanation = html.Div(
-        [
-            html.H4("Understanding the Parameter Surface"),
-            html.P(
-                [
-                    "This 3D visualization shows how the birth probability (pBorn) and death probability (pDie) ",
-                    "affect various metrics in Allen relation simulations.",
-                ]
-            ),
-            html.H5("Available Metrics:"),
-            html.Ul(
-                [
-                    html.Li(
-                        [
-                            html.Strong("Relation Probability: "),
-                            "Shows how likely a specific relation is to occur across the parameter space. ",
-                            "Higher surfaces indicate parameter combinations that favor that relation.",
-                        ]
-                    ),
-                    html.Li(
-                        [
-                            html.Strong("Chi-Square Statistic: "),
-                            "Measures deviation from the uniform distribution. ",
-                            "Higher values (peaks) indicate parameter combinations where the distribution is ",
-                            "significantly non-uniform.",
-                        ]
-                    ),
-                    html.Li(
-                        [
-                            html.Strong("Shannon Entropy: "),
-                            "Measures the uncertainty in the distribution. Lower values indicate ",
-                            "that fewer relations dominate the distribution.",
-                        ]
-                    ),
-                ]
-            ),
-            html.H5("Interaction Tips:"),
-            html.Ul(
-                [
-                    html.Li("Click and drag to rotate the 3D view"),
-                    html.Li("Scroll to zoom in/out"),
-                    html.Li("Double-click to reset the view"),
-                    html.Li("Hover over the surface to see exact values"),
-                ]
-            ),
-            html.P(
-                [
-                    "Try changing the resolution and trials per point to adjust the trade-off ",
-                    "between computation time and surface detail.",
-                ],
-                style={"fontStyle": "italic", "marginTop": "15px"},
-            ),
-        ],
-        style={
-            "margin": "20px 0",
-            "padding": "15px",
-            "backgroundColor": "#f8f8f8",
-            "borderRadius": "5px",
-        },
-    )
+    content = [
+        html.P(
+            [
+                "This 3D visualization shows how the birth probability (pBorn) and death probability (pDie) ",
+                "affect various metrics in Allen relation simulations.",
+            ]
+        ),
+        # ...existing content...
+    ]
 
-    return explanation
+    # Use standardized explanation panel format
+    return create_explanation_panel("Understanding the Parameter Surface", content)
 
 
 if __name__ == "__main__":

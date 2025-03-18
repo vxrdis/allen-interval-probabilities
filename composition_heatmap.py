@@ -17,18 +17,22 @@ or more ambiguous (higher entropy) results.
 import numpy as np
 import pandas as pd
 from dash import dcc, html
-import plotly.graph_objects as go
 
 # Import from our modules
 from relations import (
     compose_relations,
     get_relation_name,
     ALLEN_RELATION_ORDER,
-    generate_composition_matrix,  # Import the new function
+    generate_composition_matrix,
 )
 
 # Import shared utilities
 from shared_utils import calculate_shannon_entropy
+from visualisation_utils import (
+    create_control_panel,
+    create_explanation_panel,
+    generate_heatmap_figure,
+)
 
 
 def create_composition_matrix():
@@ -65,80 +69,62 @@ def generate_interactive_composition_heatmap(comp_data, view_mode="cardinality")
     # Select the appropriate data based on view mode
     if view_mode == "entropy":
         z_data = comp_data["entropy"]
-        colorscale = "Viridis"  # Green-blue scale for entropy
+        colorscale = "Viridis"
         title = "Allen Relation Composition Table - Entropy"
         colorbar_title = "Shannon Entropy (bits)"
         hover_format = ".3f bits"
     else:  # cardinality view
         z_data = comp_data["cardinality"]
-        colorscale = "Blues"  # Blue scale for counts
+        colorscale = "Blues"
         title = "Allen Relation Composition Table - Number of Possible Relations"
         colorbar_title = "Count"
         hover_format = ".0f relations"
 
-    # Create the heatmap trace
-    heatmap = go.Heatmap(
-        z=z_data,
-        x=ALLEN_RELATION_ORDER,
-        y=ALLEN_RELATION_ORDER,
-        colorscale=colorscale,
-        showscale=True,
-        colorbar=dict(
-            title=dict(text=colorbar_title),
-        ),
-        hovertemplate="Composition: %{y} ∘ %{x}<br>"
-        + f"Value: %{{z:{hover_format}}}<extra></extra>",
-    )
-
-    # Create the figure
-    fig = go.Figure(data=heatmap)
-
-    # Add hover annotations with detailed composition information
+    # Create hover text containing detailed composition information
+    hover_text = []
     for i, rel1 in enumerate(ALLEN_RELATION_ORDER):
+        hover_row = []
         for j, rel2 in enumerate(ALLEN_RELATION_ORDER):
-            # Get the composition result - handle string key format
+            # Get composition result
             key = f"{rel1},{rel2}"
             result = comp_data["compositions"].get(key, [])
 
             # Format result for display
-            if result:
-                result_str = ", ".join(result)
-                count = len(result)
+            result_str = ", ".join(result) if result else "∅"
+            count = len(result)
 
-                # Use shared utility function for entropy calculation
-                uniform_probs = [1 / count] * count if count > 0 else []
-                entropy = calculate_shannon_entropy(uniform_probs)
+            # Calculate entropy
+            uniform_probs = [1 / count] * count if count > 0 else []
+            entropy = calculate_shannon_entropy(uniform_probs)
 
-                # Add invisible scatter point with custom hover text
-                fig.add_trace(
-                    go.Scatter(
-                        x=[j],
-                        y=[i],
-                        mode="markers",
-                        marker=dict(size=1, color="rgba(0,0,0,0)"),
-                        hoverinfo="text",
-                        hovertext=(
-                            f"<b>{rel1} ∘ {rel2}</b><br>"
-                            + f"Possible relations: {result_str}<br>"
-                            + f"Count: {count}<br>"
-                            + f"Entropy: {entropy:.3f} bits"
-                        ),
-                        showlegend=False,
-                    )
-                )
+            # Create hover text
+            hover_row.append(
+                f"Composition: {rel1} ∘ {rel2}<br>"
+                f"Possible relations: {result_str}<br>"
+                f"Count: {count}<br>"
+                f"Entropy: {entropy:.3f} bits"
+            )
+        hover_text.append(hover_row)
 
-    # Update layout
-    fig.update_layout(
+    # Use the utility function to generate the heatmap
+    fig = generate_heatmap_figure(
+        z_data=z_data,
+        hover_text=hover_text,
+        colorscale=colorscale,
         title=title,
-        xaxis=dict(title="Second Relation (rel₂)", side="top"),
-        yaxis=dict(
-            title="First Relation (rel₁)",
-            autorange="reversed",  # To match conventional matrix orientation
-        ),
-        height=700,
-        width=800,
-        margin=dict(t=100, b=50, l=100, r=50),
+        x_title="Second Relation (rel₂)",
+        y_title="First Relation (rel₁)",
+        colorbar_title=colorbar_title,
     )
+
+    # Update layout with specific settings for composition heatmap
+    fig.update_layout(
+        xaxis=dict(side="top"),  # Move x-axis labels to top
+        yaxis=dict(
+            autorange="reversed"
+        ),  # Reverse y-axis to match conventional matrix orientation
+    )
+
     return fig
 
 
@@ -149,59 +135,54 @@ def create_composition_controls():
     Returns:
         A Dash component representing the control panel
     """
-    controls = html.Div(
-        [
-            html.H4(
-                "Composition Table Controls",
-                style={"marginTop": "0", "marginBottom": "15px"},
-            ),
-            html.Label("View Mode:"),
-            dcc.RadioItems(
-                id="heatmap-view-mode",
-                options=[
-                    {"label": "Cardinality (count)", "value": "cardinality"},
-                    {"label": "Entropy (uncertainty)", "value": "entropy"},
-                ],
-                value="cardinality",
-                labelStyle={"display": "inline-block", "marginRight": "15px"},
-            ),
-            html.Div(
-                [
-                    html.P(
-                        [
-                            html.Strong("Cardinality View: "),
-                            "Shows the number of possible relations that could result from each composition. ",
-                            "Fewer possible outcomes (darker blue) means more specific, constrained results.",
-                        ],
-                        style={"fontSize": "13px", "marginTop": "15px"},
-                    ),
-                    html.P(
-                        [
-                            html.Strong("Entropy View: "),
-                            "Shows the information-theoretic uncertainty (Shannon entropy) in each composition result. ",
-                            "Lower entropy (blue/green) means more certainty in the outcome.",
-                        ],
-                        style={"fontSize": "13px"},
-                    ),
-                    html.P(
-                        "Hover over cells to see the full list of possible relations for each composition.",
-                        style={
-                            "fontSize": "13px",
-                            "fontStyle": "italic",
-                            "marginTop": "15px",
-                        },
-                    ),
-                ],
-                style={
-                    "backgroundColor": "#f8f8f8",
-                    "padding": "10px",
-                    "borderRadius": "4px",
-                    "marginTop": "10px",
-                },
-            ),
-        ]
-    )
-    return controls
+    controls = [
+        dcc.RadioItems(
+            id="heatmap-view-mode",
+            options=[
+                {"label": "Cardinality (count)", "value": "cardinality"},
+                {"label": "Entropy (uncertainty)", "value": "entropy"},
+            ],
+            value="cardinality",
+            labelStyle={"display": "inline-block", "marginRight": "15px"},
+        ),
+        html.Div(
+            [
+                html.P(
+                    [
+                        html.Strong("Cardinality View: "),
+                        "Shows the number of possible relations that could result from each composition. ",
+                        "Fewer possible outcomes (darker blue) means more specific, constrained results.",
+                    ],
+                    style={"fontSize": "13px", "marginTop": "15px"},
+                ),
+                html.P(
+                    [
+                        html.Strong("Entropy View: "),
+                        "Shows the information-theoretic uncertainty (Shannon entropy) in each composition result. ",
+                        "Lower entropy (blue/green) means more certainty in the outcome.",
+                    ],
+                    style={"fontSize": "13px"},
+                ),
+                html.P(
+                    "Hover over cells to see the full list of possible relations for each composition.",
+                    style={
+                        "fontSize": "13px",
+                        "fontStyle": "italic",
+                        "marginTop": "15px",
+                    },
+                ),
+            ],
+            style={
+                "backgroundColor": "#f8f8f8",
+                "padding": "10px",
+                "borderRadius": "4px",
+                "marginTop": "10px",
+            },
+        ),
+    ]
+
+    # Use standardized control panel format
+    return create_control_panel("Composition Table Controls", controls)
 
 
 def create_composition_explanation():
@@ -211,69 +192,62 @@ def create_composition_explanation():
     Returns:
         A Dash component containing explanation text
     """
-    explanation = html.Div(
-        [
-            html.H4("Understanding the Composition Table"),
-            html.P(
-                [
-                    "This heatmap shows what happens when you ",
-                    html.Em("compose"),
-                    " two Allen relations. Composition is central to reasoning with temporal intervals.",
-                ]
-            ),
-            html.P(
-                [
-                    "For example, if we know that interval A is ",
-                    html.Strong("before (p)"),
-                    " interval B, and B is ",
-                    html.Strong("during (d)"),
-                    " interval C, what can we say about the relationship between A and C? ",
-                    "The composition table gives us the answer: A must be before (p) C.",
-                ]
-            ),
-            html.P(
-                [
-                    "While some compositions yield a single definite relation (like p ∘ d = p), ",
-                    "others result in multiple possibilities (like o ∘ d = {o, p, m}), ",
-                    "creating ambiguity in temporal reasoning.",
-                ]
-            ),
-            html.H5("Interpreting the Heatmap"),
-            html.P(
-                [
-                    "Each cell shows what happens when you compose the relation on the y-axis (rel₁) ",
-                    "with the relation on the x-axis (rel₂). The color intensity indicates:",
-                ]
-            ),
-            html.Ul(
-                [
-                    html.Li(
-                        [
-                            html.Strong("In Cardinality View: "),
-                            "The number of possible relations in the result (fewer is more specific)",
-                        ]
-                    ),
-                    html.Li(
-                        [
-                            html.Strong("In Entropy View: "),
-                            "The uncertainty of the result (lower entropy means more certainty)",
-                        ]
-                    ),
-                ]
-            ),
-            html.P(
-                "Try hovering over different cells to see the exact composition results!",
-                style={"fontStyle": "italic", "marginTop": "15px"},
-            ),
-        ],
-        style={
-            "margin": "20px 0",
-            "padding": "15px",
-            "backgroundColor": "#f8f8f8",
-            "borderRadius": "5px",
-        },
-    )
-    return explanation
+    content = [
+        html.P(
+            [
+                "This heatmap shows what happens when you ",
+                html.Em("compose"),
+                " two Allen relations. Composition is central to reasoning with temporal intervals.",
+            ]
+        ),
+        html.P(
+            [
+                "For example, if we know that interval A is ",
+                html.Strong("before (p)"),
+                " interval B, and B is ",
+                html.Strong("during (d)"),
+                " interval C, what can we say about the relationship between A and C? ",
+                "The composition table gives us the answer: A must be before (p) C.",
+            ]
+        ),
+        html.P(
+            [
+                "While some compositions yield a single definite relation (like p ∘ d = p), ",
+                "others result in multiple possibilities (like o ∘ d = {o, p, m}), ",
+                "creating ambiguity in temporal reasoning.",
+            ]
+        ),
+        html.H5("Interpreting the Heatmap"),
+        html.P(
+            [
+                "Each cell shows what happens when you compose the relation on the y-axis (rel₁) ",
+                "with the relation on the x-axis (rel₂). The color intensity indicates:",
+            ]
+        ),
+        html.Ul(
+            [
+                html.Li(
+                    [
+                        html.Strong("In Cardinality View: "),
+                        "The number of possible relations in the result (fewer is more specific)",
+                    ]
+                ),
+                html.Li(
+                    [
+                        html.Strong("In Entropy View: "),
+                        "The uncertainty of the result (lower entropy means more certainty)",
+                    ]
+                ),
+            ]
+        ),
+        html.P(
+            "Try hovering over different cells to see the exact composition results!",
+            style={"fontStyle": "italic", "marginTop": "15px"},
+        ),
+    ]
+
+    # Use standardized explanation panel format
+    return create_explanation_panel("Understanding the Composition Table", content)
 
 
 def initialize_composition_heatmap():
