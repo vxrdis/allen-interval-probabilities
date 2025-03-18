@@ -20,8 +20,12 @@ from dash import dcc, html
 import plotly.graph_objects as go
 
 # Import from our modules
-from relations import compose_relations
-from constants import ALLEN_RELATION_ORDER, get_relation_name
+from relations import (
+    compose_relations,
+    get_relation_name,
+    ALLEN_RELATION_ORDER,
+    generate_composition_matrix,  # Import the new function
+)
 
 # Import shared utilities
 from shared_utils import calculate_shannon_entropy
@@ -40,35 +44,8 @@ def create_composition_matrix():
         - cardinality: A numpy array with counts of possible outcomes
         - entropy: A numpy array with Shannon entropy values
     """
-    n = len(ALLEN_RELATION_ORDER)
-    compositions = {}  # To store the actual composition results
-    cardinality_matrix = np.zeros((n, n))
-    entropy_matrix = np.zeros((n, n))
-
-    # Compute compositions for all relation pairs
-    for i, rel1 in enumerate(ALLEN_RELATION_ORDER):
-        for j, rel2 in enumerate(ALLEN_RELATION_ORDER):
-            # Get the theoretical composition result
-            result = compose_relations(rel1, rel2)
-
-            # Store the raw composition result
-            compositions[(rel1, rel2)] = result
-
-            # Calculate cardinality (number of possible relations in result)
-            cardinality_matrix[i, j] = len(result)
-
-            # Calculate entropy using shared utility function
-            if len(result) > 0:
-                # Uniform distribution over possible outcomes
-                uniform_p = 1.0 / len(result)
-                probs = [uniform_p] * len(result)
-                entropy_matrix[i, j] = calculate_shannon_entropy(probs)
-
-    return {
-        "compositions": compositions,
-        "cardinality": cardinality_matrix,
-        "entropy": entropy_matrix,
-    }
+    # Use the centralized function from relations.py
+    return generate_composition_matrix(format="dict", with_entropy=True)
 
 
 def generate_interactive_composition_heatmap(comp_data, view_mode="cardinality"):

@@ -27,14 +27,18 @@ import os
 import time
 
 # Import from our modules
-from relations import compose_relations
+from relations import (
+    list_all_relations,
+    compose_relations,
+    get_relation_name,
+    ALLEN_RELATION_ORDER,
+    generate_composition_matrix,  # Import the new function
+)
 from simulations import arSimulate, simulateRed, tallyProb
 import simulations
 from constants import (
-    ALLEN_RELATION_ORDER,
     RELATION_NAMES,
     RELATION_COLOURS,
-    get_relation_name,
 )
 
 # Import shared utilities
@@ -115,40 +119,34 @@ def create_composition_matrix():
     Create a theoretical composition matrix based on Allen's interval algebra.
 
     Returns:
-        A 13×13 NumPy array where cell [i, j] contains the list of possible
-        relations when composing relations in positions i and j in ALLEN_RELATION_ORDER
+        A dictionary containing composition data with keys:
+        - compositions: Raw composition results
+        - cardinality: Number of possible relations for each composition
+        - entropy: Shannon entropy for each composition (if requested)
     """
-    n = len(ALLEN_RELATION_ORDER)
-    matrix = np.empty((n, n), dtype=object)
-    for i, rel1 in enumerate(ALLEN_RELATION_ORDER):
-        for j, rel2 in enumerate(ALLEN_RELATION_ORDER):
-            matrix[i, j] = compose_relations(rel1, rel2)
-    return matrix
+    # Use the centralized function from relations.py with both formats
+    matrix_array = generate_composition_matrix(format="array")
+    matrix_dict = generate_composition_matrix(format="dict", with_entropy=True)
+
+    # Return both formats for different visualization needs
+    return {"array": matrix_array, "dict": matrix_dict}
 
 
-def plot_composition_heatmap_entropy(matrix, title, filename=None):
+def plot_composition_heatmap_entropy(matrix_data, title, filename=None):
     """
     Generate a heatmap of the composition table, showing entropy for each cell.
 
     Args:
-        matrix: A 13×13 matrix where each cell is a list of possible relations
+        matrix_data: Dictionary containing composition data from create_composition_matrix()
         title: Title for the plot
         filename: If provided, save the plot to this filename
 
     Returns:
         The figure and axes objects
     """
-    n = len(ALLEN_RELATION_ORDER)
-    # Calculate entropy for each cell
-    entropy_matrix = np.zeros((n, n))
-    for i in range(n):
-        for j in range(n):
-            # Count how many relations in each cell and calculate entropy
-            # Assuming equal probability for each possible relation in a cell
-            num_relations = len(matrix[i, j])
-            if num_relations > 0:
-                probs = [1 / num_relations] * num_relations
-                entropy_matrix[i, j] = calculate_shannon_entropy(probs)
+    # Get the matrix formats we need
+    matrix = matrix_data["array"]  # For relation text annotations
+    entropy_matrix = matrix_data["dict"]["entropy"]  # Pre-calculated entropy
 
     # Create a DataFrame for better axis labelling
     df = pd.DataFrame(
@@ -174,6 +172,7 @@ def plot_composition_heatmap_entropy(matrix, title, filename=None):
     )
 
     # Add cell annotations showing the possible relations
+    n = len(ALLEN_RELATION_ORDER)
     for i in range(n):
         for j in range(n):
             relations_text = ",".join(matrix[i, j])
@@ -204,24 +203,23 @@ def plot_composition_heatmap_entropy(matrix, title, filename=None):
     return plt.gcf(), ax
 
 
-def plot_composition_heatmap_size(matrix, title, filename=None):
+def plot_composition_heatmap_size(matrix_data, title, filename=None):
     """
     Generate a heatmap showing the number of possible relations for each composition.
 
     Args:
-        matrix: A 13×13 matrix where each cell is a list of possible relations
+        matrix_data: Dictionary containing composition data from create_composition_matrix()
         title: Title for the plot
         filename: If provided, save the plot to this filename
 
     Returns:
         The figure and axes objects
     """
-    n = len(ALLEN_RELATION_ORDER)
-    # Calculate cardinality for each cell
-    cardinality_matrix = np.zeros((n, n))
-    for i in range(n):
-        for j in range(n):
-            cardinality_matrix[i, j] = len(matrix[i, j])
+    # Get the matrix formats we need
+    matrix = matrix_data["array"]  # For relation text annotations
+    cardinality_matrix = matrix_data["dict"][
+        "cardinality"
+    ]  # Pre-calculated cardinality
 
     # Create a DataFrame for better axis labelling
     df = pd.DataFrame(
@@ -242,6 +240,7 @@ def plot_composition_heatmap_size(matrix, title, filename=None):
     )
 
     # Add cell annotations showing the possible relations
+    n = len(ALLEN_RELATION_ORDER)
     for i in range(n):
         for j in range(n):
             relations_text = ",".join(matrix[i, j])
@@ -545,12 +544,14 @@ if __name__ == "__main__":
 
     # Generate composition matrix visualisation
     print("\nGenerating composition matrix visualisation...")
-    matrix = create_composition_matrix()
+    matrix_data = create_composition_matrix()
     plot_composition_heatmap_entropy(
-        matrix, "Allen Relation Composition Table - Entropy", "composition_entropy.png"
+        matrix_data,
+        "Allen Relation Composition Table - Entropy",
+        "composition_entropy.png",
     )
     plot_composition_heatmap_size(
-        matrix,
+        matrix_data,
         "Allen Relation Composition Table - Number of Possible Relations",
         "composition_size.png",
     )

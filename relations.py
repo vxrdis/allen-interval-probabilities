@@ -462,6 +462,78 @@ def print_composition(rel1, rel2):
     return ordered_result
 
 
+# ----- Composition Table Generation -----
+
+
+def generate_composition_matrix(format="dict", with_entropy=False):
+    """
+    Generate a composition matrix for Allen's interval relations.
+
+    This function computes all possible compositions of Allen relations
+    and returns them in the specified format. It can be used for both
+    theoretical analysis and visualization purposes.
+
+    Args:
+        format: Output format - either "dict" (default) or "array"
+        with_entropy: If True, also calculate entropy values for each composition
+
+    Returns:
+        If format="dict":
+            Dictionary with keys: "compositions", "cardinality", and optionally "entropy"
+        If format="array":
+            NumPy array where cell [i,j] contains composition of relations i and j
+    """
+    import numpy as np
+    from shared_utils import calculate_shannon_entropy
+
+    n = len(ALLEN_RELATION_ORDER)
+    compositions = {}  # Store raw composition results
+
+    if format == "array":
+        # Create a numpy array to hold composition results
+        matrix = np.empty((n, n), dtype=object)
+
+    # Calculate cardinality and entropy matrices if needed
+    cardinality_matrix = np.zeros((n, n))
+    entropy_matrix = np.zeros((n, n)) if with_entropy else None
+
+    # Compute compositions for all relation pairs
+    for i, rel1 in enumerate(ALLEN_RELATION_ORDER):
+        for j, rel2 in enumerate(ALLEN_RELATION_ORDER):
+            # Get composition result
+            result = compose_relations(rel1, rel2)
+
+            # Store in appropriate format
+            key = (rel1, rel2)
+            compositions[key] = result
+
+            if format == "array":
+                matrix[i, j] = result
+
+            # Calculate metadata
+            cardinality_matrix[i, j] = len(result)
+
+            if with_entropy and len(result) > 0:
+                # Calculate entropy with uniform distribution over possible outcomes
+                uniform_p = 1.0 / len(result)
+                probs = [uniform_p] * len(result)
+                entropy_matrix[i, j] = calculate_shannon_entropy(probs)
+
+    # Return results in requested format
+    if format == "array":
+        return matrix
+    else:
+        result = {
+            "compositions": compositions,
+            "cardinality": cardinality_matrix,
+        }
+
+        if with_entropy:
+            result["entropy"] = entropy_matrix
+
+        return result
+
+
 def generate_composition_table():
     """
     Generate the complete Allen relation composition table using Alspaugh's notation.
@@ -471,14 +543,9 @@ def generate_composition_table():
     Returns:
         Dictionary mapping relation pairs to composition results
     """
-    relations = ALLEN_RELATION_ORDER
-    table = {}
-
-    for rel1 in relations:
-        for rel2 in relations:
-            table[(rel1, rel2)] = compose_relations(rel1, rel2)
-
-    return table
+    # Use the more general function with appropriate defaults
+    result = generate_composition_matrix(format="dict")
+    return result["compositions"]
 
 
 # Example usage
