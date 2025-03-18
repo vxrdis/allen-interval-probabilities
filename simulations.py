@@ -455,6 +455,7 @@ class IntervalSimulator:
         batch_size=None,
         test_uniformity=False,
         force_recompute=False,
+        verbose=False,  # Add verbosity parameter
     ):
         """
         Run Allen relation simulation using multiple processes in parallel.
@@ -467,6 +468,7 @@ class IntervalSimulator:
             batch_size: Size of each batch of trials (defaults to trials/n_processes)
             test_uniformity: Whether to test the result distribution for uniformity
             force_recompute: Whether to force recomputation even if results are cached
+            verbose: Whether to print progress information
 
         Returns:
             If test_uniformity is False: Dictionary of relation frequencies
@@ -482,9 +484,10 @@ class IntervalSimulator:
                 self._update_tally(self.results)
                 self.simulation_count += 1
 
-                print(
-                    f"Using cached results for pBorn={self.pBorn}, pDie={self.pDie}, trials={self.trials}"
-                )
+                if verbose:
+                    print(
+                        f"Using cached results for pBorn={self.pBorn}, pDie={self.pDie}, trials={self.trials}"
+                    )
 
                 if test_uniformity:
                     test_results = cached_data.get("test_results")
@@ -514,11 +517,12 @@ class IntervalSimulator:
             min(batch_size, self.trials - i * batch_size) for i in range(n_batches)
         ]
 
-        # Print information about parallel execution
-        print(
-            f"Running {self.trials} trials across {n_processes} processes in {n_batches} batches"
-        )
-        print(f"Birth probability: {self.pBorn}, Death probability: {self.pDie}")
+        # Print information about parallel execution if verbose
+        if verbose:
+            print(
+                f"Running {self.trials} trials across {n_processes} processes in {n_batches} batches"
+            )
+            print(f"Birth probability: {self.pBorn}, Death probability: {self.pDie}")
 
         # Create a pool of worker processes
         with multiprocessing.Pool(processes=n_processes) as pool:
@@ -747,15 +751,22 @@ class IntervalSimulator:
         return analyze_distribution(self.results)
 
     def print_distribution(self):
-        """Print the distribution of Allen relations in a readable format."""
+        """
+        Print the distribution of Allen relations in a readable format.
+
+        This method is kept for backward compatibility. For new code,
+        use get_distribution_analysis() instead and handle the presentation
+        in client code.
+
+        Returns:
+            Dictionary containing analysis results
+        """
         if self.results is None:
             self.simulate()
 
-        print(f"\nDistribution for pBorn={self.pBorn}, pDie={self.pDie}:")
-
-        # Get the distribution analysis and print formatted results
         analysis = self.get_distribution_analysis()
         result_str = format_distribution_results(analysis)
+        print(f"\nDistribution for pBorn={self.pBorn}, pDie={self.pDie}:")
         print(result_str)
 
         # Print uniformity test results
@@ -961,7 +972,7 @@ class IntervalSimulator:
         from relations import l, r  # Import endpoint identifier functions
 
         la, ra = l("a"), r("a")  # Endpoints for interval a
-        lb, rb = l("b"), r("b")  # Endpoints for interval b
+        lb, rb = l("b")  # Endpoints for interval b
 
         # Direct mappings from histories to endpoint configurations
         if Hist == [[0, 0], [1, 1], [2, 2]]:
@@ -1011,51 +1022,69 @@ class IntervalSimulator:
         """
         Save simulation results to a file.
 
+        DEPRECATED: Use get_formatted_results() instead and handle file writing in caller code.
+
         Args:
             filename: Name of the file to save to
         """
         try:
             with open(filename, "a") as f:
-                f.write("Allen Interval Relation Simulation Results\n")
-                f.write("======================================\n")
-
-                # Write parameters and trial count
-                f.write(f"Parameters: pBorn={self.pBorn}, pDie={self.pDie}\n")
-                f.write(f"Total trials: {self.simulation_count * self.trials}\n\n")
-
-                # Write raw counts
-                f.write("Relation Frequencies:\n")
-                if self.param_key in self.tally:
-                    total = sum(self.tally[self.param_key].values())
-                    f.write(f"Total counts: {total}\n")
-                    for rel in ALLEN_RELATION_ORDER:
-                        count = self.tally[self.param_key][rel]
-                        name = get_relation_name(rel)
-                        f.write(f"{rel} ({name}): {count}\n")
-
-                    # Write probabilities
-                    probs = normalize_counts(self.tally[self.param_key])
-                    f.write("\nRelation Probabilities:\n")
-                    for rel in ALLEN_RELATION_ORDER:
-                        name = get_relation_name(rel)
-                        f.write(f"{rel} ({name}): {probs[rel]:.6f}\n")
-
+                f.write(self.get_formatted_results())
                 f.write("\n")
-
             print(f"Results saved to {filename}")
         except Exception as e:
             print(f"Error saving to file: {e}")
 
-    def visualize_distribution(self, save_path=None):
+    def get_formatted_results(self):
         """
-        Visualize the distribution of Allen relations.
+        Get formatted simulation results as a string.
 
-        Args:
-            save_path: If specified, save the plot to this file path
+        This replaces direct printing with a function that returns formatted text.
+
+        Returns:
+            String containing formatted results
+        """
+        if self.results is None:
+            self.simulate()
+
+        result_text = f"Allen Interval Relation Simulation Results\n"
+        result_text += "======================================\n"
+        result_text += f"Parameters: pBorn={self.pBorn}, pDie={self.pDie}\n"
+        result_text += f"Total trials: {self.simulation_count * self.trials}\n\n"
+        result_text += "Relation Frequencies:\n"
+
+        if self.param_key in self.tally:
+            total = sum(self.tally[self.param_key].values())
+            result_text += f"Total counts: {total}\n"
+
+            for rel in ALLEN_RELATION_ORDER:
+                count = self.tally[self.param_key][rel]
+                name = get_relation_name(rel)
+                result_text += f"{rel} ({name}): {count}\n"
+
+            # Add probabilities
+            probs = normalize_counts(self.tally[self.param_key])
+            result_text += "\nRelation Probabilities:\n"
+
+            for rel in ALLEN_RELATION_ORDER:
+                name = get_relation_name(rel)
+                result_text += f"{rel} ({name}): {probs[rel]:.6f}\n"
+
+        return result_text
+
+    def create_distribution_figure(self):
+        """
+        Create a visualization of the Allen relation distribution.
+
+        This replaces visualize_distribution() with a function that returns the figure
+        without saving it.
+
+        Returns:
+            Matplotlib Figure object
         """
         probs = self.get_probabilities()
 
-        plt.figure(figsize=(12, 6))
+        fig = plt.figure(figsize=(12, 6))
         # Use ALLEN_RELATION_ORDER for consistent ordering
         bars = plt.bar(
             ALLEN_RELATION_ORDER,
@@ -1085,13 +1114,28 @@ class IntervalSimulator:
         plt.ylim(0, max([probs[rel] for rel in ALLEN_RELATION_ORDER]) * 1.1)
         plt.legend()
 
-        # Save to file if specified, otherwise show
+        return fig
+
+    def visualize_distribution(self, save_path=None):
+        """
+        Create a visualization of the Allen relation distribution and optionally save it.
+
+        DEPRECATED: Use create_distribution_figure() instead and handle saving in caller code.
+
+        Args:
+            save_path: If specified, save the plot to this file path
+
+        Returns:
+            Matplotlib Figure object
+        """
+        fig = self.create_distribution_figure()
+
+        # Save to file if specified
         if save_path:
             plt.savefig(save_path)
-            plt.close()
             print(f"Visualization saved as {save_path}")
-        else:
-            plt.show()
+
+        return fig
 
 
 def set_random_seed(seed=42):
@@ -1474,6 +1518,7 @@ def simulate_parallel(
     test_uniformity=False,
     use_cache=True,
     force_recompute=False,
+    verbose=False,  # Add verbosity parameter to control output
 ):
     """
     Run a parallel Allen relation simulation with the specified parameters.
@@ -1488,6 +1533,7 @@ def simulate_parallel(
         test_uniformity: Whether to test the result distribution for uniformity
         use_cache: Whether to use result caching
         force_recompute: Whether to force recomputation even if results are cached
+        verbose: Whether to print progress information
 
     Returns:
         If test_uniformity is False: Dictionary of relation frequencies
@@ -1500,6 +1546,7 @@ def simulate_parallel(
         n_processes=n_processes,
         test_uniformity=test_uniformity,
         force_recompute=force_recompute,
+        verbose=verbose,
     )
 
 
@@ -1522,13 +1569,17 @@ def clear_cache():
     print("Simulation cache cleared")
 
 
-def warm_cache(param_list=None):
+def warm_cache(param_list=None, verbose=True):
     """
     Pre-compute and cache results for common parameter combinations.
 
     Args:
         param_list: List of (pBorn, pDie, trials) tuples to pre-compute
                     If None, uses a default set of common parameters
+        verbose: Whether to print progress information
+
+    Returns:
+        Dictionary with cache statistics after warming
     """
     if param_list is None:
         # Default set of commonly used parameters
@@ -1539,18 +1590,24 @@ def warm_cache(param_list=None):
             (0.2, 0.1, 10000),
         ]
 
-    print(f"Warming cache with {len(param_list)} parameter combinations...")
+    if verbose:
+        print(f"Warming cache with {len(param_list)} parameter combinations...")
 
     for i, (pBorn, pDie, trials) in enumerate(param_list):
-        print(
-            f"Computing [{i+1}/{len(param_list)}] pBorn={pBorn}, pDie={pDie}, trials={trials}"
-        )
+        if verbose:
+            print(
+                f"Computing [{i+1}/{len(param_list)}] pBorn={pBorn}, pDie={pDie}, trials={trials}"
+            )
         results, test_results = arSimulate(
             pBorn, pDie, trials, test_uniformity=True, use_cache=True
         )
 
-    print("Cache warming complete")
-    print(f"Cache stats: {get_cache_stats()}")
+    stats = get_cache_stats()
+    if verbose:
+        print("Cache warming complete")
+        print(f"Cache stats: {stats}")
+
+    return stats
 
 
 # If run as main script
@@ -1559,4 +1616,6 @@ if __name__ == "__main__":
 
     # Generate visualizations for a few key parameter settings
     for pBorn, pDie in [(0.1, 0.1), (0.01, 0.01), (0.2, 0.1)]:
-        visualize_relation_distribution(pBorn, pDie)
+        simulator = registry.get_or_create_simulator(pBorn, pDie, 10000)
+        fig = simulator.visualize_distribution(f"allen_distribution_{pBorn}_{pDie}.png")
+        plt.close(fig)  # Close the figure after saving

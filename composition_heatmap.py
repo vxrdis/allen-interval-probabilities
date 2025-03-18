@@ -422,10 +422,17 @@ if __name__ == "__main__":
     print("Creating test visualizations...")
     fig_card = generate_interactive_composition_heatmap(comp_data, "cardinality")
     fig_ent = generate_interactive_composition_heatmap(comp_data, "entropy")
-    # Save HTML visualizations for preview
+
+    # Save HTML visualizations for preview (only in script mode)
     import plotly.io as pio
 
-    pio.write_html(fig_card, file="composition_cardinality.html", auto_open=True)
-    pio.write_html(fig_ent, file="composition_entropy.html", auto_open=False)
+    # Only save files when running as a script
+    output_dir = "."  # Could be parameterized in a real application
+    pio.write_html(
+        fig_card, file=f"{output_dir}/composition_cardinality.html", auto_open=True
+    )
+    pio.write_html(
+        fig_ent, file=f"{output_dir}/composition_entropy.html", auto_open=False
+    )
 
-    print("Test visualizations saved as HTML files.")
+    print(f"Test visualizations saved in {output_dir}")

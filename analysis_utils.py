@@ -139,7 +139,9 @@ def format_uniformity_test_results(test_results):
 
 def print_uniformity_test_results(test_results):
     """
-    Print the results of a uniformity test in a formatted way.
+    Print the results of a uniformity test.
+
+    DEPRECATED: Use format_uniformity_test_results() instead and handle printing in caller code.
 
     Args:
         test_results: Either a results dictionary from test_uniform_distribution()

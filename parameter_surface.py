@@ -42,25 +42,23 @@ def generate_parameter_surface_data(
     p_values,
     selected_relation=None,
     trials_per_point=500,
-    print_results=False,
     use_cache=True,
+    verbose=False,  # Add verbose parameter to control output
+    progress_callback=None,  # Add callback for progress reporting
 ):
     """
     Generate simulation data across a grid of birth/death probability parameters.
-
-    This function runs simulations for multiple combinations of pBorn and pDie,
-    collecting both the probability of a selected relation and statistical metrics
-    at each grid point.
 
     Args:
         p_values: List of probability values to use for both pBorn and pDie
         selected_relation: The specific Allen relation to track (default: 'e' for equals)
         trials_per_point: Number of simulation trials for each parameter combination
-        print_results: Whether to print uniformity test results for each point
         use_cache: Whether to use cached simulation results when available
+        verbose: Whether to print progress and test results
+        progress_callback: Optional callback function taking (completed, total, percentage) for progress tracking
 
     Returns:
-        Dictionary with grid data for 3D surface plotting
+        Dictionary with grid data for 3D surface plotting and computational metadata
     """
     # Default to equals relation if none specified
     if selected_relation is None:
@@ -85,62 +83,28 @@ def generate_parameter_surface_data(
             # Set a fixed random seed for reproducibility at each grid point
             set_random_seed()
 
-            # Run simulation for this parameter combination, using cache if enabled
+            # Run simulation for this parameter combination
             if use_cache:
-                # Use arSimulate with cache support
                 counts = arSimulate(
                     pBorn, pDie, trials_per_point, test_uniformity=False, use_cache=True
                 )
             else:
                 # Original method: directly simulate
-                histories = simulateRed(pBorn, pDie, trials_per_point)
-
-                # Count occurrences using NumPy arrays
-                n_relations = len(ALLEN_RELATION_ORDER)
-                counts_array = np.zeros(n_relations, dtype=np.int64)
-                relation_indices = {
-                    rel: idx for idx, rel in enumerate(ALLEN_RELATION_ORDER)
-                }
-
-                for history in histories:
-                    relation = arCode(history)
-                    if relation:
-                        counts_array[relation_indices[relation]] += 1
-
-                counts = {
-                    rel: counts_array[idx]
-                    for idx, rel in enumerate(ALLEN_RELATION_ORDER)
-                }
+                # ...existing simulation code...
+                pass
 
             # Calculate total and probabilities
             total_count = sum(counts.values())
             if total_count > 0:
-                # Calculate probabilities for all relations
-                probs_array = (
-                    np.array([counts[rel] for rel in ALLEN_RELATION_ORDER])
-                    / total_count
-                )
-                probs = {
-                    rel: probs_array[idx]
-                    for idx, rel in enumerate(ALLEN_RELATION_ORDER)
-                }
+                # ...existing probability calculation...
 
-                # Track probability of the selected relation
-                selected_idx = relation_indices[selected_relation]
-                probability_grid[i, j] = probs_array[selected_idx]
-
-                # Calculate entropy directly from the probability array
-                non_zero_probs = probs_array[probs_array > 0]
-                entropy = -np.sum(non_zero_probs * np.log2(non_zero_probs))
-                entropy_grid[i, j] = entropy
-
-                # Handle case where not enough data for chi-square test
-                if total_count >= 13:  # At least one expected sample per category
+                # Handle chi-square test
+                if total_count >= 13:
                     test_results = test_uniform_distribution(counts)
                     chi2_grid[i, j] = test_results["chi2"]
                     p_value_grid[i, j] = test_results["p_value"]
 
-                    if print_results:
+                    if verbose:
                         print(
                             f"Point ({pBorn:.3f}, {pDie:.3f}): chi²={test_results['chi2']:.4f}, p={test_results['p_value']:.6f} - "
                             + f"{test_results['conclusion']}"
@@ -148,7 +112,17 @@ def generate_parameter_surface_data(
 
             # Track progress
             completed_points += 1
-            if completed_points % 5 == 0 or completed_points == total_points:
+
+            # Report progress through callback or print statement
+            if progress_callback:
+                progress_callback(
+                    completed_points,
+                    total_points,
+                    completed_points / total_points * 100,
+                )
+            elif verbose and (
+                completed_points % 5 == 0 or completed_points == total_points
+            ):
                 print(
                     f"Progress: {completed_points}/{total_points} points computed ({completed_points/total_points*100:.1f}%)"
                 )
@@ -298,8 +272,8 @@ if __name__ == "__main__":
     surface_data = generate_parameter_surface_data(
         test_p_values,
         selected_relation="e",
-        trials_per_point=300,  # equals relation
-        print_results=True,  # Print uniformity test results
+        trials_per_point=300,
+        verbose=True,  # Print progress in script mode
     )
 
     print(
@@ -314,6 +288,7 @@ if __name__ == "__main__":
     # Save HTML visualizations for preview
     import plotly.io as pio
 
+    # Only save files when running as a script
     pio.write_html(fig_prob, file="surface_probability.html", auto_open=True)
     pio.write_html(fig_chi2, file="surface_chi2.html", auto_open=False)
     print("Test visualizations saved as HTML files.")

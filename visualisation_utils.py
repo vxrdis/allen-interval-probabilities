@@ -631,28 +631,40 @@ def generate_3d_surface_figure(
     return fig
 
 
-def run_visualization_demo():
+def run_visualization_demo(save_files=True, output_dir="."):
     """
     Run a demonstration of the various visualization utilities.
 
-    This function creates sample visualizations using all the available
-    visualization functions in this module and saves them to files.
+    Args:
+        save_files: Whether to save output files to disk
+        output_dir: Directory for output files
+
+    Returns:
+        Dictionary containing all generated figures and their paths
     """
     import plotly.io as pio
     from relations import compose_relations
+
+    output = {"figures": {}, "paths": {}}
 
     print("Running visualization utilities demonstration...")
 
     # Generate sample probability data
     sample_probs = {rel: np.random.random() for rel in ALLEN_RELATION_ORDER}
-    # Normalize to create a proper probability distribution
     total = sum(sample_probs.values())
     sample_probs = {rel: val / total for rel, val in sample_probs.items()}
 
     # 1. Create static bar chart
     print("Creating bar chart...")
     fig, ax = create_bar_chart(sample_probs, "Sample Allen Relation Distribution")
-    plt.savefig("demo_bar_chart.png")
+    output["figures"]["bar_chart"] = (fig, ax)
+
+    # Save if requested
+    if save_files:
+        bar_chart_path = f"{output_dir}/demo_bar_chart.png"
+        plt.savefig(bar_chart_path)
+        output["paths"]["bar_chart"] = bar_chart_path
+
     plt.close(fig)
 
     # 2. Generate composition data for heatmaps
@@ -665,7 +677,6 @@ def run_visualization_demo():
 
     # 3. Create static heatmap
     print("Creating static heatmap...")
-    # Create a simple matrix for demonstration
     size_matrix = np.zeros((len(ALLEN_RELATION_ORDER), len(ALLEN_RELATION_ORDER)))
     for i, rel1 in enumerate(ALLEN_RELATION_ORDER):
         for j, rel2 in enumerate(ALLEN_RELATION_ORDER):
@@ -675,53 +686,73 @@ def run_visualization_demo():
             )
 
     fig, ax = create_heatmap(size_matrix, "Composition Size Matrix")
-    plt.savefig("demo_static_heatmap.png")
+    output["figures"]["static_heatmap"] = (fig, ax)
+
+    # Save if requested
+    if save_files:
+        static_heatmap_path = f"{output_dir}/demo_static_heatmap.png"
+        plt.savefig(static_heatmap_path)
+        output["paths"]["static_heatmap"] = static_heatmap_path
+
     plt.close(fig)
 
     # 4. Create interactive heatmaps
     print("Creating interactive heatmaps...")
+
     # Simple interactive heatmap
     simple_fig = create_interactive_heatmap(
         size_matrix, "Interactive Composition Size Matrix"
     )
-    pio.write_html(simple_fig, file="demo_interactive_heatmap.html")
+    output["figures"]["interactive_heatmap"] = simple_fig
 
-    # Composition heatmap with annotations
+    # Composition heatmaps
     comp_fig = create_composition_heatmap(
         composition_dict, "Allen Relation Composition Table", show_labels=True
     )
-    pio.write_html(comp_fig, file="demo_composition_heatmap.html")
+    output["figures"]["composition_heatmap"] = comp_fig
 
-    # Composition heatmap without annotations
     comp_fig_clean = create_composition_heatmap(
         composition_dict, "Allen Relation Composition Table (Clean)", show_labels=False
     )
-    pio.write_html(comp_fig_clean, file="demo_composition_heatmap_clean.html")
+    output["figures"]["composition_heatmap_clean"] = comp_fig_clean
 
     # 5. Create probability heatmap
     print("Creating probability heatmap...")
-    # Generate sample probability matrix
     prob_matrix = np.zeros((len(ALLEN_RELATION_ORDER), len(ALLEN_RELATION_ORDER)))
     for i in range(len(ALLEN_RELATION_ORDER)):
         for j in range(len(ALLEN_RELATION_ORDER)):
             prob_matrix[i, j] = np.random.random()
 
     prob_fig = create_probability_heatmap(prob_matrix, "Sample Probability Heatmap")
-    pio.write_html(prob_fig, file="demo_probability_heatmap.html")
+    output["figures"]["probability_heatmap"] = prob_fig
 
-    print("Demo complete! Files saved in the current directory.")
+    # Save interactive figures if requested
+    if save_files:
+        interactive_paths = {
+            "interactive_heatmap": f"{output_dir}/demo_interactive_heatmap.html",
+            "composition_heatmap": f"{output_dir}/demo_composition_heatmap.html",
+            "composition_heatmap_clean": f"{output_dir}/demo_composition_heatmap_clean.html",
+            "probability_heatmap": f"{output_dir}/demo_probability_heatmap.html",
+        }
 
-    return {
-        "static_files": ["demo_bar_chart.png", "demo_static_heatmap.png"],
-        "interactive_files": [
-            "demo_interactive_heatmap.html",
-            "demo_composition_heatmap.html",
-            "demo_composition_heatmap_clean.html",
-            "demo_probability_heatmap.html",
-        ],
-    }
+        for key, path in interactive_paths.items():
+            pio.write_html(output["figures"][key], file=path)
+            output["paths"][key] = path
+
+    print(
+        "Demo complete!"
+        + (" Files saved in the output directory." if save_files else "")
+    )
+
+    return output
 
 
 if __name__ == "__main__":
     # Run the demo if this file is executed directly
-    run_visualization_demo()
+    results = run_visualization_demo()
+    print(f"Created {len(results['figures'])} figures")
+
+    if results["paths"]:
+        print("Files saved:")
+        for name, path in results["paths"].items():
+            print(f"  {name}: {path}")
