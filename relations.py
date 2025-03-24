@@ -1,19 +1,4 @@
-from constants import (
-    ALLEN_RELATIONS,
-    PRECEDES,
-    MEETS,
-    OVERLAPS,
-    FINISHED_BY,
-    CONTAINS,
-    STARTS,
-    EQUALS,
-    STARTED_BY,
-    DURING,
-    FINISHES,
-    OVERLAPPED_BY,
-    MET_BY,
-    PRECEDED_BY,
-)
+import constants as c
 
 
 def l(x):
@@ -82,31 +67,31 @@ def allen(x, y, rel):
     rx = r(x)
     ly = l(y)
     ry = r(y)
-    if rel == PRECEDES:
+    if rel == c.PRECEDES:
         return [{lx}, {rx}, {ly}, {ry}]
-    elif rel == OVERLAPS:
+    elif rel == c.OVERLAPS:
         return [{lx}, {ly}, {rx}, {ry}]
-    elif rel == MEETS:
+    elif rel == c.MEETS:
         return [{lx}, {rx, ly}, {ry}]
-    elif rel == DURING:
+    elif rel == c.DURING:
         return [{ly}, {lx}, {rx}, {ry}]
-    elif rel == STARTS:
+    elif rel == c.STARTS:
         return [{lx, ly}, {rx}, {ry}]
-    elif rel == FINISHES:
+    elif rel == c.FINISHES:
         return [{ly}, {lx}, {rx, ry}]
-    if rel == PRECEDED_BY:
+    if rel == c.PRECEDED_BY:
         return [{ly}, {ry}, {lx}, {rx}]
-    elif rel == OVERLAPPED_BY:
+    elif rel == c.OVERLAPPED_BY:
         return [{ly}, {lx}, {ry}, {rx}]
-    elif rel == MET_BY:
+    elif rel == c.MET_BY:
         return [{ly}, {ry, lx}, {rx}]
-    elif rel == CONTAINS:
+    elif rel == c.CONTAINS:
         return [{lx}, {ly}, {ry}, {rx}]
-    elif rel == STARTED_BY:
+    elif rel == c.STARTED_BY:
         return [{lx, ly}, {ry}, {rx}]
-    elif rel == FINISHED_BY:
+    elif rel == c.FINISHED_BY:
         return [{lx}, {ly}, {rx, ry}]
-    elif rel == EQUALS:
+    elif rel == c.EQUALS:
         return [{lx, ly}, {rx, ry}]
 
 

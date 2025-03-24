@@ -1,19 +1,19 @@
+import constants as c
 from random import random as rand
-from constants import ALLEN_RELATIONS, STATE_BEFORE, STATE_DURING, STATE_AFTER
 
 tally = {}
 
 
 def allen_relation_order():
-    return ALLEN_RELATIONS
+    return c.ALLEN_RELATIONS
 
 
 def updateState(state, pBorn, pDie):
     toss = rand()
-    if state == STATE_BEFORE and toss < pBorn:
-        return STATE_DURING
-    elif state == STATE_DURING and toss < pDie:
-        return STATE_AFTER
+    if state == c.UNBORN and toss < pBorn:
+        return c.ALIVE
+    elif state == c.ALIVE and toss < pDie:
+        return c.DEAD
     else:
         return state
 
@@ -48,17 +48,11 @@ def arCode(Hist):
 
 
 def arInitDic():
-    dic = {}
-    for i in allen_relation_order():
-        dic[i] = 0
-    return dic
+    return {i: 0 for i in allen_relation_order()}
 
 
 def checkSum(dic):
-    sum = 0
-    for i in dic:
-        sum = sum + dic[i]
-    return sum
+    return sum(dic.values())
 
 
 def w2file(file, dic):
@@ -71,18 +65,12 @@ def w2file(file, dic):
 
 
 def probDic(dic, trials):
-    temp = {}
-    for k in dic:
-        temp[k] = dic[k] / trials
-    return temp
+    return {k: dic[k] / trials for k in dic}
 
 
 def score2prob(dic):
     trials = checkSum(dic)
-    temp = {}
-    for k in dic:
-        temp[k] = dic[k] / trials
-    return temp
+    return {k: dic[k] / trials for k in dic}
 
 
 def combineInv(dic):
@@ -141,10 +129,7 @@ def tallyProb(pBorn, pDie):
 
 
 def talProb():
-    temp = {}
-    for k in tally:
-        temp[k] = score2prob(combineInv(tally[k]))
-    return temp
+    return {k: score2prob(combineInv(tally[k])) for k in tally}
 
 
 def ta2file(file):
@@ -185,7 +170,6 @@ def demo():
         pBorn, pDie, trials = params
         print(f"arSimulate({pBorn},{pDie},{trials})")
         result = arSimulate(pBorn, pDie, trials)
-
         ordered_result = {k: result.get(k, 0) for k in allen_relation_order()}
         print(ordered_result)
         print(f"Total count: {checkSum(result)}")

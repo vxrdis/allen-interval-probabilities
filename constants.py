@@ -1,24 +1,21 @@
-# Allen relation symbols
-PRECEDES = "p"  # x precedes y
-MEETS = "m"  # x meets y
-OVERLAPS = "o"  # x overlaps y
-FINISHED_BY = "F"  # x finished by y
-CONTAINS = "D"  # x contains y
-STARTS = "s"  # x starts y
-EQUALS = "e"  # x equals y
-STARTED_BY = "S"  # x started by y
-DURING = "d"  # x during y
-FINISHES = "f"  # x finishes y
-OVERLAPPED_BY = "O"  # x overlapped by y
-MET_BY = "M"  # x met by y
-PRECEDED_BY = "P"  # x preceded by y
+PRECEDES = "p"
+MEETS = "m"
+OVERLAPS = "o"
+FINISHED_BY = "F"
+CONTAINS = "D"
+STARTS = "s"
+EQUALS = "e"
+STARTED_BY = "S"
+DURING = "d"
+FINISHES = "f"
+OVERLAPPED_BY = "O"
+MET_BY = "M"
+PRECEDED_BY = "P"
 
-# States for simulation
-STATE_BEFORE = 0  # Before birth
-STATE_DURING = 1  # During lifetime
-STATE_AFTER = 2  # After death
+UNBORN = 0
+ALIVE = 1
+DEAD = 2
 
-# Canonical order of Allen relations
 ALLEN_RELATIONS = [
     PRECEDES,
     MEETS,
