@@ -51,24 +51,16 @@ def gen(p, q, t=0):
     return (start, end, time)
 
 
-def gen_relation(p1, q1, p2, q2, t=0):
-    a_start, a_end, t = gen(p1, q1, t)
-    b_start, b_end, t = gen(p2, q2, t)
-    return get_relation(a_start, a_end, b_start, b_end)
-
-
 def run(p, q, t=0):
-    return gen_relation(p, q, p, q, t)
+    a = gen(p, q, t)
+    b = gen(p, q, t)
+    return get_relation(a[0], a[1], b[0], b[1])
 
 
-def simulate_relations(p1, q1, p2, q2, trials=1000):
-    results = {rel: 0 for rel in c.ALLEN_RELATIONS}
-
-    for _ in range(trials):
-        relation = gen_relation(p1, q1, p2, q2)
-        results[relation] += 1
-
-    return results
+def gen_relation(p1, q1, p2, q2, t=0):
+    a_start, a_end, _ = gen(p1, q1, t)
+    b_start, b_end, _ = gen(p2, q2, t)
+    return get_relation(a_start, a_end, b_start, b_end)
 
 
 def many(p, q, n=1000):
@@ -76,6 +68,16 @@ def many(p, q, n=1000):
 
     for _ in range(n):
         relation = run(p, q)
+        results[relation] += 1
+
+    return results
+
+
+def simulate_relations(p1, q1, p2, q2, trials=1000):
+    results = {rel: 0 for rel in c.ALLEN_RELATIONS}
+
+    for _ in range(trials):
+        relation = gen_relation(p1, q1, p2, q2)
         results[relation] += 1
 
     return results

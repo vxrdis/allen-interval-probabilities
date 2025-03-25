@@ -1,5 +1,6 @@
-import constants as c
 from random import random as rand
+import constants as c
+import stats
 
 tally = {}
 
@@ -129,7 +130,7 @@ def tallyProb(pBorn, pDie):
 
 
 def talProb():
-    return {k: score2prob(combineInv(tally[k])) for k in tally}
+    return {k: score2prob(stats.combineInv(tally[k])) for k in tally}
 
 
 def ta2file(file):

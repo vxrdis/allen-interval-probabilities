@@ -1,5 +1,6 @@
 import math
 from scipy import stats
+import constants as c
 
 
 def entropy(counts):
@@ -31,6 +32,24 @@ def point_meet_start_vs_overlap_during(counts):
         return float("inf")
 
     return pms_sum / od_sum
+
+
+def combineInv(dic):
+    temp = {}
+    temp[c.PRECEDES] = dic.get(c.PRECEDES, 0) + dic.get(c.PRECEDED_BY, 0)
+    temp[c.MEETS] = dic.get(c.MEETS, 0) + dic.get(c.MET_BY, 0)
+    temp[c.OVERLAPS] = dic.get(c.OVERLAPS, 0) + dic.get(c.OVERLAPPED_BY, 0)
+    temp[c.FINISHED_BY] = dic.get(c.FINISHED_BY, 0)
+    temp[c.CONTAINS] = dic.get(c.CONTAINS, 0)
+    temp[c.STARTS] = dic.get(c.STARTS, 0) + dic.get(c.STARTED_BY, 0)
+    temp[c.EQUALS] = dic.get(c.EQUALS, 0)
+    temp[c.STARTED_BY] = dic.get(c.STARTED_BY, 0)
+    temp[c.DURING] = dic.get(c.DURING, 0) + dic.get(c.CONTAINS, 0)
+    temp[c.FINISHES] = dic.get(c.FINISHES, 0)
+    temp[c.OVERLAPPED_BY] = dic.get(c.OVERLAPPED_BY, 0)
+    temp[c.MET_BY] = dic.get(c.MET_BY, 0)
+    temp[c.PRECEDED_BY] = dic.get(c.PRECEDED_BY, 0)
+    return temp
 
 
 def describe(counts):
