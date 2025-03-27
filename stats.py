@@ -24,6 +24,20 @@ def chi_square_uniform(counts):
     return p_value
 
 
+def chi_square_against_theory(observed, expected_dict):
+    total_observed = sum(observed.values())
+    if total_observed == 0:
+        return 1.0
+    observed_counts = [observed.get(rel, 0) for rel in c.ALLEN_RELATIONS]
+    expected_counts = [
+        expected_dict.get(rel, 0) * total_observed for rel in c.ALLEN_RELATIONS
+    ]
+    if sum(expected_counts) == 0:
+        return 1.0
+    chi2, p_value = stats.chisquare(observed_counts, expected_counts)
+    return p_value
+
+
 def point_meet_start_vs_overlap_during(counts):
     pms_sum = sum(counts.get(rel, 0) for rel in ["p", "m", "s"])
     od_sum = sum(counts.get(rel, 0) for rel in ["o", "d"])
