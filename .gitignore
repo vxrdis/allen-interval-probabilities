@@ -1,0 +1,5 @@
+# macOS system file used to store folder metadata (safe to ignore)
+.DS_Store
+
+# Cached simulation results (generated dynamically, not needed in version control)
+simulation_results.json

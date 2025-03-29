@@ -5,7 +5,7 @@ import constants as c
 
 base_dir = Path(__file__).parent
 input_file = base_dir / "simulation_results.json"
-output_file = base_dir / "REPORT.md"
+output_file = base_dir / "RESULTS.md"
 
 with open(input_file, "r") as f:
     results = json.load(f)
