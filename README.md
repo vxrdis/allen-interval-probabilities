@@ -1,17 +1,39 @@
-<div align="center"><h1>Probabilities of Allen Interval Relations</h1><p><a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>&#8201;<a href="https://www.python.org/downloads/release/python-396/"><img src="https://img.shields.io/badge/Python-3.9-blue.svg" alt="Python 3.9"></a>&#8201;<a href="https://github.com/vxrdis/allen-interval-probabilities/commits/main"><img src="https://img.shields.io/github/last-commit/vxrdis/allen-interval-probabilities" alt="Last Commit"></a>&#8201;<a href="https://github.com/vxrdis/allen-interval-probabilities"><img src="https://img.shields.io/github/repo-size/vxrdis/allen-interval-probabilities" alt="Repo Size"></a>&#8201;<a href="https://black.readthedocs.io/en/stable/"><img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code Style: Black"></a></p><p><a href="https://www.tcd.ie/" target="_blank" rel="noopener noreferrer"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.tcd.ie/identity/assets/logos/Logos%20page/png/Trinity%20logo%20%E2%80%93%20White.png"><source media="(prefers-color-scheme: light)" srcset="https://www.tcd.ie/identity/assets/logos/Logos%20page/jpg/Trinity_Main_Logo.jpg"><img src="https://www.tcd.ie/identity/assets/logos/Logos%20page/jpg/Trinity_Main_Logo.jpg" alt="Trinity College Dublin Logo" width="300" loading="lazy" decoding="async"></picture></a></p><p>A <a href="https://projects.scss.tcd.ie" target="_blank" rel="noopener noreferrer">Final Year Project</a> by <strong>Cillín Forrester</strong><br>under the supervision of Dr <a href="https://www.scss.tcd.ie/Tim.Fernando/" target="_blank" rel="noopener noreferrer">Tim Fernando</a><br>submitted to the <a href="https://www.tcd.ie/scss/" target="_blank" rel="noopener noreferrer">School of Computer Science and Statistics</a><br>in partial fulfilment of the requirements for the degree of<br>B.A. (Mod.) in <a href="https://www.tcd.ie/scss/courses/undergraduate/computer-science-linguistics-and-a-language/" target="_blank" rel="noopener noreferrer">Computer Science, Linguistics and a Language</a></p></div>
+<div align="center">
+  <h1>Probabilities of Allen Interval Relations</h1>
+  <p>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>&#8201;
+    <a href="https://www.python.org/downloads/release/python-396/"><img src="https://img.shields.io/badge/Python-3.9-blue.svg" alt="Python 3.9"></a>&#8201;
+    <a href="https://github.com/vxrdis/allen-interval-probabilities/commits/main"><img src="https://img.shields.io/github/last-commit/vxrdis/allen-interval-probabilities" alt="Last Commit"></a>&#8201;
+    <a href="https://github.com/vxrdis/allen-interval-probabilities"><img src="https://img.shields.io/github/repo-size/vxrdis/allen-interval-probabilities" alt="Repo Size"></a>&#8201;
+    <a href="https://black.readthedocs.io/en/stable/"><img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code Style: Black"></a>
+  </p>
+  <p>
+    <a href="https://www.tcd.ie/" target="_blank" rel="noopener noreferrer">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://www.tcd.ie/identity/assets/logos/Logos%20page/png/Trinity%20logo%20%E2%80%93%20White.png">
+        <source media="(prefers-color-scheme: light)" srcset="https://www.tcd.ie/identity/assets/logos/Logos%20page/jpg/Trinity_Main_Logo.jpg">
+        <img src="https://www.tcd.ie/identity/assets/logos/Logos%20page/jpg/Trinity_Main_Logo.jpg" alt="Trinity College Dublin Logo" width="300" loading="lazy" decoding="async">
+      </picture>
+    </a>
+  </p>
+  <p>
+    A <a href="https://projects.scss.tcd.ie" target="_blank" rel="noopener noreferrer">Final Year Project</a> by <strong>Cillín Forrester</strong><br>
+    under the supervision of Dr <a href="https://www.scss.tcd.ie/Tim.Fernando/" target="_blank" rel="noopener noreferrer">Tim Fernando</a><br>
+    submitted to the <a href="https://www.tcd.ie/scss/" target="_blank" rel="noopener noreferrer">School of Computer Science and Statistics</a><br>
+    in partial fulfilment of the requirements for the degree of<br>
+    B.A. (Mod.) in <a href="https://www.tcd.ie/scss/courses/undergraduate/computer-science-linguistics-and-a-language/" target="_blank" rel="noopener noreferrer">Computer Science, Linguistics and a Language</a>
+  </p>
+</div>
 
 ## Contents
 
 - [Project Overview](#project-overview)
 - [Theoretical Motivation](#theoretical-motivation-and-context)
-- [Literature Review and Related Work](#literature-review-and-related-work)
+- [Literature Review](#literature-review-and-related-work)
 - [Research Objectives](#research-objectives)
-- [Methodology](#methodology)
-  - [Simulation Approach](#simulation-approach)
-  - [Statistical Evaluations](#statistical-evaluations)
 - [Project Structure](#project-structure-and-contents)
 - [Usage Instructions](#usage-instructions)
-- [Empirical Results](#hypotheses-and-evaluations)
+- [Hypotheses and Evaluations](#hypotheses-and-evaluations)
 - [Visualisation](#visualisation-and-interaction)
 - [Future Work](#future-work)
 - [Citation](#citation)
@@ -125,21 +147,28 @@ Recent research has explored probabilistic extensions of Allen's relations:
 - [Fernando and Vogel (2019)](https://www.scss.tcd.ie/Tim.Fernando/NLPinAI_2019.pdf) challenged the assumption of uniform distribution among Allen's relations
 - They demonstrated analytically that certain temporal relations (particularly those without endpoint coincidences) inherently occur more frequently under random conditions
 - Their **finite-order model** predicts that as timelines become denser, exact endpoint coincidences approach zero probability
+- Specifically, under asymptotic conditions where both birth and death probabilities approach zero (`p → 0`, `q → 0`), their model predicts domination by six "long-range" relations
 
-To empirically investigate these theoretical insights, [Suliman (2021)](https://www.scss.tcd.ie/undergraduate/computer-science-language/bacsll_portal/final_year_reports/bacsll_reports_2021/suliman-thesis-final.pdf) introduced a **stochastic birth-death automaton model**, representing intervals as events transitioning between "unborn," "living," and "dead" states.
+#### Suliman's Prediction
 
-> This simulation approach allows probabilities of Allen relations to emerge dynamically, rather than being imposed statically.
+> Suliman proposed that seven relations (equals, before, after, starts, started_by, meets, met_by) occur with probability 1/9, and the remaining six with 1/27.
 
-By varying simulation parameters, distinct empirical distributions arise, aligning closely with analytic predictions but also revealing important asymmetries.
+At precisely balanced birth-death probabilities (`p = 0.5` and `q = 0.5`), the empirical distribution closely matches this model (χ² p ≈ 0.76), offering strong support for Suliman's prediction. This balanced condition (equal probability of intervals starting and ending) creates the specific stochastic environment where Suliman's 1/9 vs 1/27 distribution holds.
 
-[Petridis et al. (2010)](https://doi.org/10.1109/ICDMW.2010.149) offered another perspective through Allen's **"hourglass" model**, assigning continuous probabilities to interval relations based on their relative positions and durations.
+Outside this balanced region, Suliman's model is rejected — suggesting its validity depends on specific temporal density regimes.
+
+#### Fernando–Vogel Asymptotic Model
+
+> Fernando and Vogel predicted that as `p → 0` and `q → 0` (extremely low probabilities of birth and death), six long-range relations (before, after, during, contains, overlaps, overlapped_by) should dominate, each converging to a probability of ~1/6.
+
+This pattern emerges clearly in simulations at extreme low `p` and `q`, supporting their **asymptotic argument** for sparse timelines.
 
 ### Complementary Frameworks
 
 Complementary approaches have appeared in temporal reasoning frameworks and NLP:
 
-- [Santos and Young's (1999)](<https://doi.org/10.1016/S0004-3702(99)00042-1>) **Probabilistic Temporal Networks** combined Bayesian methods with interval-based constraints
-- [Badaloni and Giacomin (1999)](<https://doi.org/10.1016/S0888-613X(99)00019-3>) adopted **fuzzy logic extensions** to accommodate gradual or uncertain relations
+- [Santos and Young's (1999)](<https://doi.org/10.1016/S0888-613X(99)00009-2>) **Probabilistic Temporal Networks** combined Bayesian methods with interval-based constraints
+- [Badaloni and Giacomin (2006)](https://doi.org/10.1016/j.artint.2006.04.001) _A fuzzy extension of Allen's interval algebra_. _Artificial Intelligence_, 170(10), 872–908.
 
 ### Statistical Validation
 
@@ -154,7 +183,7 @@ Beyond theoretical and simulation frameworks, statistical analyses have been cri
 Practical applications of probabilistic Allen algebra are increasingly significant:
 
 - **Temporal annotation standards** like [TimeML](https://timeml.github.io/) leverage these relations
-- In archaeology, tools like [ArchaeoPhases](https://archaeophases.archaeometry.org/) use Allen's relations probabilistically to quantify uncertainty in chronological intervals
+- In archaeology, tools like [ArchaeoPhases](https://archaeostat.github.io/ArchaeoPhases/) use Allen's relations probabilistically to quantify uncertainty in chronological intervals
 
 However, despite the depth of theoretical exploration, practical tools and visualisation dashboards for probabilistic Allen relations have remained limited.
 
@@ -340,13 +369,22 @@ If you reference or build upon this work, please cite:
 
 ## References
 
-- **Allen, J.F.** (1983). _Maintaining Knowledge about Temporal Intervals_. _Communications of the ACM_, 26(11), 832–843. [doi.org/10.1145/182.358434](https://doi.org/10.1145/182.358434)
-- **Alspaugh, T.A.** (2019). _Allen's Interval Algebra_. [thomasalspaugh.org/pub/fnd/allen.html](https://thomasalspaugh.org/pub/fnd/allen.html)
-- **Badaloni, S., & Giacomin, M.** (1999). _The algebra IAfuz: a framework for qualitative fuzzy temporal reasoning_. _Artificial Intelligence_, 170(10), 872–908. [doi.org/10.1016/S0888-613X(99)00019-3](<https://doi.org/10.1016/S0888-613X(99)00019-3>)
-- **Fernando, T., & Vogel, C.** (2019). _Prior Probabilities of Allen Interval Relations over Finite Orders_. [scss.tcd.ie/Tim.Fernando/NLPinAI_2019.pdf](https://www.scss.tcd.ie/Tim.Fernando/NLPinAI_2019.pdf)
-- **Jurafsky, D., & Martin, J.H.** (2022). _Speech and Language Processing_ (3rd ed.), Chapter 19: Temporal Information Extraction. [web.stanford.edu/~jurafsky/slp3](https://web.stanford.edu/~jurafsky/slp3/)
-- **Mahowald, K., Ivanova, A., Kean, H., Thompson, B., Gibson, E., & Fedorenko, E.** (2024). _Dissociating language and thought in large language models_. _Trends in Cognitive Sciences_. [doi.org/10.1016/j.tics.2023.11.001](https://doi.org/10.1016/j.tics.2023.11.001)
-- **Petridis, M., Bloehdorn, S., Saathoff, C., & Simou, N.** (2010). _Uncertainty in the semantic multimedia analysis_. 2010 IEEE International Conference on Data Mining Workshops. [doi.org/10.1109/ICDMW.2010.149](https://doi.org/10.1109/ICDMW.2010.149)
-- **Petrukhin, P.** (2024). _FSMs and Timeline Granularity in Interval Reasoning_. MCS Dissertation, Trinity College Dublin. [scss.tcd.ie/.../petrukhin-thesis-final.pdf](https://publications.scss.tcd.ie/theses/diss/2024/TCD-SCSS-DISSERTATION-2024-024.pdf)
-- **Santos, P., & Young, R.** (1999). _Probabilistic temporal networks: A unified framework for reasoning with time and uncertainty_. _International Journal of Approximate Reasoning_, 20(3), 263–291. [doi.org/10.1016/S0004-3702(99)00042-1](<https://doi.org/10.1016/S0004-3702(99)00042-1>)
-- **Suliman, A.** (2021). _Finite Temporality: A Probabilistic Approach to Interval Relations_. Undergraduate Thesis, Trinity College Dublin. [scss.tcd.ie/.../suliman-thesis-final.pdf](https://www.scss.tcd.ie/publications/projects/2021/TCD-SCSS-FYP-2021-040.pdf)
+- **Allen, J.F.** (1983). _Maintaining Knowledge about Temporal Intervals_. _Communications of the ACM_, 26(11), 832–843. [DOI:10.1145/182.358434](https://doi.org/10.1145/182.358434).
+
+- **Alspaugh, T.A.** (2019). _Allen's Interval Algebra_. Retrieved from [thomasalspaugh.org](https://thomasalspaugh.org/pub/fnd/allen.html).
+
+- **Badaloni, S., & Giacomin, M.** (2006). _A fuzzy extension of Allen's interval algebra_. _Artificial Intelligence_, 170(10), 872–908. [DOI:10.1016/j.artint.2006.04.001](https://doi.org/10.1016/j.artint.2006.04.001).
+
+- **Fernando, T., & Vogel, C.** (2019). _Prior Probabilities of Allen Interval Relations over Finite Orders_. In _Proceedings of the NLPinAI Workshop_, part of the 11th International Conference on Agents and Artificial Intelligence (ICAART 2019), Prague, Czech Republic. [PDF](https://www.scss.tcd.ie/Tim.Fernando/NLPinAI_2019.pdf).
+
+- **Jurafsky, D., & Martin, J.H.** (2025). _Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition with Language Models_ (3rd ed., draft). Chapter 20: Information Extraction — Relations, Events, and Time. Retrieved from [web.stanford.edu/~jurafsky/slp3](https://web.stanford.edu/~jurafsky/slp3/).
+
+- **Mahowald, K., Ivanova, A., Kean, H., Thompson, B., Gibson, E., & Fedorenko, E.** (2024). _Dissociating language and thought in large language models_. _Trends in Cognitive Sciences_, 28(4), 319–334. [DOI:10.1016/j.tics.2024.01.011](https://doi.org/10.1016/j.tics.2024.01.011).
+
+- **Petridis, S., Paliouras, G., & Perantonis, S.J.** (2010). _Allen's hourglass: Probabilistic treatment of interval relations_. NCSR "Demokritos", Greece. [PDF](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=85b2f290ed665bd0e8844f75322885ad0aa037cb).
+
+- **Petrukhin, P.** (2024). _FSMs and Timeline Granularity in Interval Reasoning_. MCS Dissertation, Trinity College Dublin. [PDF](https://publications.scss.tcd.ie/theses/diss/2024/TCD-SCSS-DISSERTATION-2024-024.pdf).
+
+- **Santos, P., & Young, R.** (1999). _Probabilistic temporal networks: A unified framework for reasoning with time and uncertainty_. _International Journal of Approximate Reasoning_, 20(3), 263–291. [DOI:10.1016/S0888-613X(99)00009-2](<https://doi.org/10.1016/S0888-613X(99)00009-2>).
+
+- **Suliman, A.** (2021). _Finite Temporality: A Probabilistic Approach to Interval Relations_. Undergraduate Thesis, Trinity College Dublin. [PDF](https://www.scss.tcd.ie/~sulimanm/assets/thesis.pdf).
