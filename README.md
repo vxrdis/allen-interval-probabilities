@@ -45,6 +45,42 @@ This repository presents a **Final Year Project** investigating probabilistic ex
 
 The project integrates **formal temporal logic** (a system for reasoning about time using logical rules) with **stochastic modelling** (mathematical techniques for analysing random processes), offering an extensible framework for reasoning about time under uncertainty.
 
+<details><summary><strong>Table A</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>Basic Interval Composition</code></summary><br>
+
+|                                          | **p**&nbsp;<sub>before</sub> | **m**&nbsp;<sub>meets</sub> | **o**&nbsp;<sub>overlaps</sub> | **F**&nbsp;<sub>finished&nbsp;by</sub> | **D**&nbsp;<sub>contains</sub> | **s**&nbsp;<sub>starts</sub> | **e**&nbsp;<sub>equals</sub> | **S**&nbsp;<sub>started&nbsp;by</sub> | **d**&nbsp;<sub>during</sub> | **f**&nbsp;<sub>finishes</sub> | **O**&nbsp;<sub>overlapped&nbsp;by</sub> | **M**&nbsp;<sub>met&nbsp;by</sub> | **P**&nbsp;<sub>after</sub> |
+| :--------------------------------------- | :--------------------------: | :-------------------------: | :----------------------------: | :------------------------------------: | :----------------------------: | :--------------------------: | :--------------------------: | :-----------------------------------: | :--------------------------: | :----------------------------: | :--------------------------------------: | :-------------------------------: | :-------------------------: |
+| **p**&nbsp;<sub>before</sub>             |             (p)              |             (p)             |              (p)               |                  (p)                   |              (p)               |             (p)              |             (p)              |                  (p)                  |           (pmosd)            |            (pmosd)             |                 (pmosd)                  |              (pmosd)              |         <i>full</i>         |
+| **m**&nbsp;<sub>meets</sub>              |             (p)              |             (p)             |              (p)               |                  (p)                   |              (p)               |             (m)              |             (m)              |                  (m)                  |            (osd)             |             (osd)              |                  (osd)                   |               (Fef)               |           (DSOMP)           |
+| **o**&nbsp;<sub>overlaps</sub>           |             (p)              |             (p)             |             (pmo)              |                 (pmo)                  |            (pmoFD)             |             (o)              |             (o)              |                 (oFD)                 |            (osd)             |             (osd)              |              <i>concur</i>               |               (DSO)               |           (DSOMP)           |
+| **F**&nbsp;<sub>finished&nbsp;by</sub>   |             (p)              |             (m)             |              (o)               |                  (F)                   |              (D)               |             (o)              |             (F)              |                  (D)                  |            (osd)             |             (Fef)              |                  (DSO)                   |               (DSO)               |           (DSOMP)           |
+| **D**&nbsp;<sub>contains</sub>           |           (pmoFD)            |            (oFD)            |             (oFD)              |                  (D)                   |              (D)               |            (oFD)             |             (D)              |                  (D)                  |        <i>concur</i>         |             (DSO)              |                  (DSO)                   |               (DSO)               |           (DSOMP)           |
+| **s**&nbsp;<sub>starts</sub>             |             (p)              |             (p)             |             (pmo)              |                 (pmo)                  |            (pmoFD)             |             (s)              |             (s)              |                 (seS)                 |             (d)              |              (d)               |                  (dfO)                   |                (M)                |             (P)             |
+| **e**&nbsp;<sub>equals</sub>             |             (p)              |             (m)             |              (o)               |                  (F)                   |              (D)               |             (s)              |             (e)              |                  (S)                  |             (d)              |              (f)               |                   (O)                    |                (M)                |             (P)             |
+| **S**&nbsp;<sub>started&nbsp;by</sub>    |           (pmoFD)            |            (oFD)            |             (oFD)              |                  (D)                   |              (D)               |            (seS)             |             (S)              |                  (S)                  |            (dfO)             |              (O)               |                   (O)                    |                (M)                |             (P)             |
+| **d**&nbsp;<sub>during</sub>             |             (p)              |             (p)             |            (pmosd)             |                (pmosd)                 |          <i>full</i>           |             (d)              |             (d)              |                (dfOMP)                |             (d)              |              (d)               |                 (dfOMP)                  |                (P)                |             (P)             |
+| **f**&nbsp;<sub>finishes</sub>           |             (p)              |             (m)             |             (osd)              |                 (Fef)                  |            (DSOMP)             |             (d)              |             (f)              |                 (OMP)                 |             (d)              |              (f)               |                  (OMP)                   |                (P)                |             (P)             |
+| **O**&nbsp;<sub>overlapped&nbsp;by</sub> |           (pmoFD)            |            (oFD)            |         <i>concur</i>          |                 (DSO)                  |            (DSOMP)             |            (dfO)             |             (O)              |                 (OMP)                 |            (dfO)             |              (O)               |                  (OMP)                   |                (P)                |             (P)             |
+| **M**&nbsp;<sub>met&nbsp;by</sub>        |           (pmoFD)            |            (seS)            |             (dfO)              |                  (M)                   |              (P)               |            (dfO)             |             (M)              |                  (P)                  |            (dfO)             |              (M)               |                   (P)                    |                (P)                |             (P)             |
+| **P**&nbsp;<sub>after</sub>              |         <i>full</i>          |           (dfOMP)           |            (dfOMP)             |                  (P)                   |              (P)               |           (dfOMP)            |             (P)              |                  (P)                  |           (dfOMP)            |              (P)               |                   (P)                    |                (P)                |             (P)             |
+
+<sub><i>full</i> = (pmoFDseSdfOMP) and <i>concur</i> = (oFDseSdfO)</sub>
+
+</details>
+<details><summary><strong>Table B</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>Composition Frequencies</code></summary><br>
+
+| _Frequency_ |         |          |       |         |         |     |     |     |
+| :---------- | :-----: | :------: | :---: | :-----: | :-----: | :-: | :-: | :-: |
+| **22**      |   (p)   |   (P)    |       |         |         |     |     |     |
+| **9**       |   (d)   |   (D)    |       |         |         |     |     |     |
+| **7**       |  (oFD)  |  (osd)   | (DSO) |  (dfO)  |         |     |     |     |
+| **6**       | (pmoFD) | (pmosd)  |  (m)  | (DSOMP) | (dfOMP) | (M) |     |     |
+| **5**       |   (o)   |   (O)    |       |         |         |     |     |     |
+| **4**       |  (pmo)  |  (OMP)   |       |         |         |     |     |     |
+| **3**       | _full_  | _concur_ |  (F)  |  (Fef)  |  (seS)  | (s) | (S) | (f) |
+| **1**       |   (e)   |          |       |         |         |     |     |     |
+
+</details>
+
 ## Project Overview
 
 **Allen's Interval Algebra** classifies temporal relations between intervals into 13 mutually exclusive categories. While this framework captures qualitative structure, it makes no assumptions about the relative likelihood of each relation.
@@ -277,7 +313,7 @@ This project empirically tests two central hypotheses through controlled stochas
 
 > Suliman proposed that seven relations (equals, before, after, starts, started_by, meets, met_by) occur with probability 1/9, and the remaining six with 1/27.
 
-At `p = 0.5` and `q = 0.5`, the empirical distribution closely matches this model (χ² p ≈ 0.76), offering strong support for Suliman under balanced conditions.
+At balanced probabilities (`p = 0.5`, `q = 0.5`), repeated stochastic simulations (50 runs, 5000 trials each) indicate that Suliman’s predictions hold approximately 70% of the time (mean χ² p ≈ 0.4, range: 0.15–0.8), highlighting inherent stochastic variability. This balanced condition (equal probability of intervals starting and ending) creates the specific stochastic environment where Suliman's 1/9 vs 1/27 distribution holds.
 
 Outside this region, Suliman's model is rejected — suggesting its validity depends on specific temporal density regimes.
 
@@ -395,4 +431,4 @@ If you reference or build upon this work, please cite:
 
 - **Santos, P., & Young, R.** (1999). _Probabilistic temporal networks: A unified framework for reasoning with time and uncertainty_. _International Journal of Approximate Reasoning_, 20(3), 263–291. [DOI:10.1016/S0888-613X(99)00009-2](<https://doi.org/10.1016/S0888-613X(99)00009-2>).
 
-- **Suliman, A.** (2021). _Finite Temporality: A Probabilistic Approach to Interval Relations_. Undergraduate Thesis, Trinity College Dublin. [PDF](https://www.scss.tcd.ie/~sulimanm/assets/thesis.pdf).
+- **Suliman, M.** (2021). _Finite Temporality: A Probabilistic Approach to Interval Relations_. Undergraduate Thesis, Trinity College Dublin. [PDF](https://www.scss.tcd.ie/~sulimanm/assets/thesis.pdf).
