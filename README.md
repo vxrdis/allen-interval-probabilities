@@ -93,13 +93,13 @@ This repository is structured to clearly delineate between core simulations, ana
 allen-interval-probabilities/
 ├── <a href="./docs/">docs/</a>
 ├── <a href="./batch_runner.py">batch_runner.py</a>
+├── <a href="./composition_runner.py">composition_runner.py</a>
 ├── <a href="./simulations.py">simulations.py</a>
 ├── <a href="./intervals.py">intervals.py</a>
 ├── <a href="./relations.py">relations.py</a>
 ├── <a href="./constants.py">constants.py</a>
 ├── <a href="./stats.py">stats.py</a>
 ├── <a href="./report_generator.py">report_generator.py</a>
-├── <a href="./simulation_results.json">simulation_results.json</a>
 ├── <a href="./RESULTS.md">RESULTS.md</a>
 └── <a href="./requirements.txt">requirements.txt</a>
 </pre>
@@ -118,11 +118,19 @@ pip install -r requirements.txt
 
 ### Running Simulations
 
-Simulate interval relations empirically by running:
+Simulate basic interval relations empirically by running:
 
 ```bash
 python batch_runner.py
 ```
+
+For advanced interval composition simulations (exploring how Allen relations chain together), use:
+
+```bash
+python composition_runner.py --trials 500
+```
+
+This will systematically generate all 169 possible relation pairs (13×13) and collect statistics on their compositions.
 
 ### Generating Reports
 

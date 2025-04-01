@@ -1,2 +1,6 @@
 numpy
+pandas
 scipy
+dash
+matplotlib
+plotly

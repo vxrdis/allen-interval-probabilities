@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from scipy import stats
 import constants as c
 
@@ -19,6 +20,7 @@ def chi_square_uniform(counts):
         return 1.0
 
     expected = [sum(observed) / n] * n
+    expected = [max(e, 1e-6) for e in expected]
 
     chi2, p_value = stats.chisquare(observed, expected)
     return p_value
@@ -28,12 +30,19 @@ def chi_square_against_theory(observed, expected_dict):
     total_observed = sum(observed.values())
     if total_observed == 0:
         return 1.0
+
     observed_counts = [observed.get(rel, 0) for rel in c.ALLEN_RELATIONS]
+
     expected_counts = [
         expected_dict.get(rel, 0) * total_observed for rel in c.ALLEN_RELATIONS
     ]
+
     if sum(expected_counts) == 0:
         return 1.0
+
+    epsilon = 1e-6
+    expected_counts = [max(e, epsilon) for e in expected_counts]
+
     chi2, p_value = stats.chisquare(observed_counts, expected_counts)
     return p_value
 
