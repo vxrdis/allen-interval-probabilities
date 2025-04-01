@@ -67,7 +67,7 @@ def allen(x, y, rel):
     rx = r(x)
     ly = l(y)
     ry = r(y)
-    if rel == c.PRECEDES:
+    if rel == c.BEFORE:
         return [{lx}, {rx}, {ly}, {ry}]
     elif rel == c.OVERLAPS:
         return [{lx}, {ly}, {rx}, {ry}]
@@ -79,7 +79,7 @@ def allen(x, y, rel):
         return [{lx, ly}, {rx}, {ry}]
     elif rel == c.FINISHES:
         return [{ly}, {lx}, {rx, ry}]
-    if rel == c.PRECEDED_BY:
+    if rel == c.AFTER:
         return [{ly}, {ry}, {lx}, {rx}]
     elif rel == c.OVERLAPPED_BY:
         return [{ly}, {lx}, {ry}, {rx}]

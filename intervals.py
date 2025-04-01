@@ -4,11 +4,11 @@ import constants as c
 
 def get_relation(a_start, a_end, b_start, b_end):
     if a_end < b_start:
-        return c.PRECEDES
+        return c.BEFORE
     if a_end == b_start:
         return c.MEETS
     if b_end < a_start:
-        return c.PRECEDED_BY
+        return c.AFTER
     if b_end == a_start:
         return c.MET_BY
     if a_start == b_start and a_end == b_end:

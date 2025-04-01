@@ -3,3 +3,4 @@
 
 # Cached simulation results (generated dynamically, not needed in version control)
 simulation_results.json
+composition_results.json
