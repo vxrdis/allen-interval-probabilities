@@ -1,9 +1,11 @@
 import argparse
 import json
 import math
+import random
 import time
-from pathlib import Path
+from datetime import datetime, timedelta
 from itertools import product
+from pathlib import Path
 
 from tqdm import tqdm
 
@@ -20,6 +22,8 @@ class InfEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, float) and not math.isfinite():
             return "Infinity" if obj > 0 else "-Infinity"
+        elif isinstance(obj, timedelta):
+            return str(obj)
         return super().default(obj)
 
 
@@ -49,8 +53,8 @@ def collect_stats(counts):
 
     metrics = ["chi_square_theory", "kl_divergence", "js_divergence"]
     labels = ["chi2_p", "kl", "js"]
-
     summary = refs["uniform"]
+
     return {
         "best_fit": best_fit,
         "summary": {
@@ -75,7 +79,14 @@ def collect_stats(counts):
     }
 
 
-def run_batch(trials, p_values, short=False, quiet=False):
+def run_batch(trials, p_values, short=False, quiet=False, seed=None):
+    if seed is not None:
+        random.seed(seed)
+        if not quiet:
+            print(f"Using random seed: {seed}")
+
+    start = time.time()
+    timestamp = datetime.now().isoformat(timespec="seconds")
     grid = list(product(p_values, repeat=2))
     results = {}
 
@@ -86,18 +97,26 @@ def run_batch(trials, p_values, short=False, quiet=False):
             result["counts"] = {rel: counts.get(rel, 0) for rel in c.ALLEN_RELATIONS}
         results[f"{p:.6f}_{q:.6f}"] = result
 
-    return results
+    duration = timedelta(seconds=int(time.time() - start))
+    metadata = {
+        "timestamp": timestamp,
+        "duration": str(duration),
+        "trials": trials,
+        "p_values": p_values,
+        "runs": len(grid),
+    }
+
+    return results, metadata
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Allen interval simulations")
-    parser.add_argument("--trials", type=int, help="Number of trials per simulation")
-    parser.add_argument("--p-values", type=parse_p_values, help="Probability values")
-    parser.add_argument(
-        "--output", type=str, default=DEFAULT_OUTPUT, help="Output file"
-    )
-    parser.add_argument("--quiet", action="store_true", help="Suppress output")
-    parser.add_argument("--short", action="store_true", help="Omit raw counts")
+    parser = argparse.ArgumentParser(description="Allen relation batch simulator")
+    parser.add_argument("--trials", type=int)
+    parser.add_argument("--p-values", type=parse_p_values)
+    parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT)
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--short", action="store_true")
+    parser.add_argument("--seed", type=int)
     args = parser.parse_args()
 
     trials = args.trials or DEFAULT_TRIALS
@@ -106,18 +125,22 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not args.quiet:
-        n = len(p_values)
-        print(f"Running {n**2} simulations × {trials} trials each")
+        print(f"Running {len(p_values)**2} simulations × {trials} trials each")
         print(f"Output: {out_path}")
 
-    start = time.time()
-    results = run_batch(trials, p_values, args.short, args.quiet)
+    results, metadata = run_batch(trials, p_values, args.short, args.quiet, args.seed)
 
     with out_path.open("w") as f:
-        json.dump(results, f, indent=2, cls=InfEncoder)
+        json.dump(
+            {"metadata": metadata, "results": results},
+            f,
+            indent=2,
+            cls=InfEncoder,
+            sort_keys=True,
+        )
 
     if not args.quiet:
-        print(f"\nDone in {time.time()-start:.2f}s — Saved to {out_path.name}")
+        print(f"\nDone in {metadata['duration']} — Saved to {out_path.name}")
 
 
 if __name__ == "__main__":
