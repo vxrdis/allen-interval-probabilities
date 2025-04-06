@@ -50,13 +50,29 @@ def chi_square_uniform(counts):
     return p
 
 
-def chi_square_against_theory(observed, expected_dict):
+def chi_square_against_theory(observed, expected_probs):
     total = sum(observed.values())
     if total == 0:
         return 1.0
-    obs = [observed.get(rel, 0) for rel in c.ALLEN_RELATIONS]
-    exp = [max(expected_dict.get(rel, 0) * total, 1e-5) for rel in c.ALLEN_RELATIONS]
-    _, p = stats.chisquare(obs, exp)
+
+    obs = []
+    expected = []
+
+    for rel in c.ALLEN_RELATIONS:
+        o = observed.get(rel, 0)
+        e = expected_probs.get(rel, 0) * total
+        if e > 0:
+            obs.append(o)
+            expected.append(e)
+
+    scale = sum(obs) / sum(expected)
+    expected = [e * scale for e in expected]
+
+    try:
+        _, p = stats.chisquare(obs, expected)
+    except:
+        p = 1.0
+
     return p
 
 

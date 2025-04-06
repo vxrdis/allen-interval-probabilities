@@ -2,6 +2,5 @@
 .DS_Store
 
 # Cached simulation results (generated dynamically, not needed in version control)
-simulation_results.json
-stochastic_results.json
-targeted_results.json
+sim_results.json
+comp_results.json
