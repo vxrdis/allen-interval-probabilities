@@ -13,41 +13,30 @@ def get_relation(a_start, a_end, b_start, b_end):
         return c.MET_BY
     if a_start == b_start and a_end == b_end:
         return c.EQUALS
-    if a_start == b_start and a_end < b_end:
-        return c.STARTS
-    if a_start == b_start and a_end > b_end:
-        return c.STARTED_BY
-    if a_end == b_end and a_start < b_start:
-        return c.FINISHED_BY
-    if a_end == b_end and a_start > b_start:
-        return c.FINISHES
+    if a_start == b_start:
+        return c.STARTS if a_end < b_end else c.STARTED_BY
+    if a_end == b_end:
+        return c.FINISHED_BY if a_start < b_start else c.FINISHES
     if a_start < b_start and a_end > b_end:
         return c.CONTAINS
     if a_start > b_start and a_end < b_end:
         return c.DURING
-    if a_start < b_start and b_start < a_end and a_end < b_end:
+    if a_start < b_start < a_end < b_end:
         return c.OVERLAPS
-    if b_start < a_start and a_start < b_end and b_end < a_end:
+    if b_start < a_start < b_end < a_end:
         return c.OVERLAPPED_BY
 
 
 def gen(p, q, t=0):
-    start = None
-    end = None
+    start, end, state = None, None, c.UNBORN
     time = t
-    state = c.UNBORN
-
     while state != c.DEAD:
         time += 1
         r = rand()
-
         if state == c.UNBORN and r < p:
-            state = c.ALIVE
-            start = time
+            state, start = c.ALIVE, time
         elif state == c.ALIVE and r < q:
-            state = c.DEAD
-            end = time
-
+            state, end = c.DEAD, time
     return (start, end, time)
 
 
@@ -64,20 +53,14 @@ def gen_relation(p1, q1, p2, q2, t=0):
 
 
 def many(p, q, n=1000):
-    results = {rel: 0 for rel in c.ALLEN_RELATIONS}
-
+    counts = {rel: 0 for rel in c.ALLEN_RELATIONS}
     for _ in range(n):
-        relation = run(p, q)
-        results[relation] += 1
-
-    return results
+        counts[run(p, q)] += 1
+    return counts
 
 
 def simulate_relations(p1, q1, p2, q2, trials=1000):
-    results = {rel: 0 for rel in c.ALLEN_RELATIONS}
-
+    counts = {rel: 0 for rel in c.ALLEN_RELATIONS}
     for _ in range(trials):
-        relation = gen_relation(p1, q1, p2, q2)
-        results[relation] += 1
-
-    return results
+        counts[gen_relation(p1, q1, p2, q2)] += 1
+    return counts
