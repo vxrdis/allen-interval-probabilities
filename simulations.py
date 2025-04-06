@@ -2,6 +2,7 @@ from random import random as rand
 import constants as c
 import stats
 
+# Track global tallies by (pBorn, pDie)
 tally = {}
 
 
@@ -15,167 +16,82 @@ def updateState(state, pBorn, pDie):
         return c.ALIVE
     elif state == c.ALIVE and toss < pDie:
         return c.DEAD
-    else:
-        return state
+    return state
 
 
-def arCode(Hist):
-    if Hist == [[0, 0], [1, 1], [2, 2]]:
-        return "e"
-    elif Hist == [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]]:
-        return "p"
-    elif Hist == [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2]]:
-        return "P"
-    elif Hist == [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2]]:
-        return "o"
-    elif Hist == [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2]]:
-        return "O"
-    elif Hist == [[0, 0], [1, 0], [2, 1], [2, 2]]:
-        return "m"
-    elif Hist == [[0, 0], [0, 1], [1, 2], [2, 2]]:
-        return "M"
-    elif Hist == [[0, 0], [0, 1], [1, 1], [2, 1], [2, 2]]:
-        return "d"
-    elif Hist == [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2]]:
-        return "D"
-    elif Hist == [[0, 0], [1, 1], [2, 1], [2, 2]]:
-        return "s"
-    elif Hist == [[0, 0], [1, 1], [1, 2], [2, 2]]:
-        return "S"
-    elif Hist == [[0, 0], [0, 1], [1, 1], [2, 2]]:
-        return "f"
-    elif Hist == [[0, 0], [1, 0], [1, 1], [2, 2]]:
-        return "F"
+# Allen relation codes from transition histories
+def arCode(hist):
+    rel_map = {
+        ((0, 0), (1, 1), (2, 2)): "e",
+        ((0, 0), (1, 0), (2, 0), (2, 1), (2, 2)): "p",
+        ((0, 0), (0, 1), (0, 2), (1, 2), (2, 2)): "P",
+        ((0, 0), (1, 0), (1, 1), (2, 1), (2, 2)): "o",
+        ((0, 0), (0, 1), (1, 1), (1, 2), (2, 2)): "O",
+        ((0, 0), (1, 0), (2, 1), (2, 2)): "m",
+        ((0, 0), (0, 1), (1, 2), (2, 2)): "M",
+        ((0, 0), (0, 1), (1, 1), (2, 1), (2, 2)): "d",
+        ((0, 0), (1, 0), (1, 1), (1, 2), (2, 2)): "D",
+        ((0, 0), (1, 1), (2, 1), (2, 2)): "s",
+        ((0, 0), (1, 1), (1, 2), (2, 2)): "S",
+        ((0, 0), (0, 1), (1, 1), (2, 2)): "f",
+        ((0, 0), (1, 0), (1, 1), (2, 2)): "F",
+    }
+    return rel_map.get(tuple(map(tuple, hist)), "unknown")
 
 
 def arInitDic():
-    return {i: 0 for i in allen_relation_order()}
+    return {rel: 0 for rel in allen_relation_order()}
 
 
-def checkSum(dic):
-    return sum(dic.values())
-
-
-def w2file(file, dic):
-    try:
-        geeky_file = open(file, "a")
-        geeky_file.write(str(dic) + "\n")
-        geeky_file.close()
-    except:
-        print("Unable to append to file")
-
-
-def probDic(dic, trials):
-    return {k: dic[k] / trials for k in dic}
-
-
-def score2prob(dic):
-    trials = checkSum(dic)
-    return {k: dic[k] / trials for k in dic}
-
-
-def combineInv(dic):
-    temp = {}
-    temp["p"] = dic["p"] + dic["P"]
-    temp["m"] = dic["m"] + dic["M"]
-    temp["o"] = dic["o"] + dic["O"]
-    temp["F"] = dic["F"]
-    temp["D"] = dic["D"]
-    temp["s"] = dic["s"] + dic["S"]
-    temp["e"] = dic["e"]
-    temp["S"] = dic["S"]
-    temp["d"] = dic["d"] + dic["D"]
-    temp["f"] = dic["f"]
-    temp["O"] = dic["O"]
-    temp["M"] = dic["M"]
-    temp["P"] = dic["P"]
-    return temp
+def simulateRun(pBorn, pDie):
+    hist = [[0, 0]]
+    while hist[-1] != [2, 2]:
+        a, b = hist[-1]
+        next_a = updateState(a, pBorn, pDie)
+        next_b = updateState(b, pBorn, pDie)
+        if [next_a, next_b] != hist[-1]:
+            hist.append([next_a, next_b])
+    return hist
 
 
 def simulateRed(pBorn, pDie, trials):
-    temp = []
-    for run in range(trials):
-        hist = [[0, 0]]
-        while not (hist[-1] == [2, 2]):
-            first = updateState(hist[-1][0], pBorn, pDie)
-            second = updateState(hist[-1][1], pBorn, pDie)
-            if not (hist[-1] == [first, second]):
-                hist.append([first, second])
-        temp.append(hist)
-    return temp
+    return [simulateRun(pBorn, pDie) for _ in range(trials)]
 
 
-def scoreRed(reducedRuns):
-    dic = arInitDic()
-    for r in reducedRuns:
-        dic[arCode(r)] += 1
-    return dic
+def scoreRed(histories):
+    counts = arInitDic()
+    for h in histories:
+        rel = arCode(h)
+        if rel in counts:
+            counts[rel] += 1
+    return counts
 
 
 def updateTally(pBorn, pDie, dic):
-    pStr = str(pBorn) + "," + str(pDie)
-    if not (pStr in tally):
-        tally[pStr] = arInitDic()
-    for i in allen_relation_order():
-        if i in dic:
-            tally[pStr][i] = tally[pStr][i] + dic[i]
+    key = f"{pBorn},{pDie}"
+    if key not in tally:
+        tally[key] = arInitDic()
+    for rel in dic:
+        tally[key][rel] += dic[rel]
 
 
-def tal(pBorn, pDie):
-    return tally[str(pBorn) + "," + str(pDie)]
+def arSimulate(pBorn, pDie, trials):
+    runs = simulateRed(pBorn, pDie, trials)
+    counts = scoreRed(runs)
+    updateTally(pBorn, pDie, counts)
+    return counts
 
 
-def tallyProb(pBorn, pDie):
-    return score2prob(tally[str(pBorn) + "," + str(pDie)])
+# Optional: dump tally to a file
+def dump_tally(file_path):
+    with open(file_path, "w") as f:
+        for k in tally:
+            f.write(f"{k}: {tally[k]}\n")
 
 
-def talProb():
-    return {k: score2prob(stats.combineInv(tally[k])) for k in tally}
-
-
-def ta2file(file):
-    w2file(file, "Raw tally")
-    for p in tally:
-        w2file(file, str(checkSum(tally[p])) + " trials of " + p)
-        w2file(file, tally[p])
-    w2file(file, "\n")
-
-
-def pr2file(file):
-    dic = talProb()
-    w2file(file, "Tally probabilities (combining inverses)")
-    for p in dic:
-        w2file(file, p + ":")
-        w2file(file, dic[p])
-    w2file(file, "\n")
-
-
-def arSimulate(probBorn, probDie, trials):
-    redRuns = simulateRed(probBorn, probDie, trials)
-    dic = scoreRed(redRuns)
-    p = probDic(dic, trials)
-    updateTally(probBorn, probDie, dic)
-    return dic
-
-
-def demo():
-    for params in [
-        (0.5, 0.5, 1000),
-        (0.1, 0.1, 1000),
-        (0.01, 0.01, 1000),
-        (0.001, 0.001, 1000),
-        (0.2, 0.1, 1000),
-        (0.02, 0.01, 1000),
-        (0.002, 0.001, 1000),
-    ]:
-        pBorn, pDie, trials = params
-        print(f"arSimulate({pBorn},{pDie},{trials})")
-        result = arSimulate(pBorn, pDie, trials)
-        ordered_result = {k: result.get(k, 0) for k in allen_relation_order()}
-        print(ordered_result)
-        print(f"Total count: {checkSum(result)}")
-        print()
-
-
+# Demo for sanity checking
 if __name__ == "__main__":
-    demo()
+    for p, q, trials in [(0.5, 0.5, 1000), (0.1, 0.1, 1000)]:
+        print(f"Simulating p={p}, q={q}")
+        counts = arSimulate(p, q, trials)
+        print(counts, "\n")
