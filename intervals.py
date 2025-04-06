@@ -64,3 +64,7 @@ def simulate_relations(p1, q1, p2, q2, trials=1000):
     for _ in range(trials):
         counts[gen_relation(p1, q1, p2, q2)] += 1
     return counts
+
+
+if __name__ == "__main__":
+    print("Sample distribution:", many(0.5, 0.5, 10000))
