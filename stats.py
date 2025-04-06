@@ -1,16 +1,43 @@
 import math
 import numpy as np
 from scipy import stats
+from scipy.spatial.distance import jensenshannon
 import constants as c
+
+# ===============================================
+# GLOBAL DISTRIBUTION STATISTICS
+# ===============================================
 
 
 def entropy(counts):
     total = sum(counts.values())
     if total == 0:
         return 0.0
-
-    probs = [count / total for count in counts.values() if count > 0]
+    probs = [v / total for v in counts.values() if v > 0]
     return -sum(p * math.log2(p) for p in probs)
+
+
+def gini(counts):
+    values = np.array(list(counts.values()))
+    if values.sum() == 0:
+        return 0.0
+    sorted_vals = np.sort(values)
+    n = len(values)
+    index = np.arange(1, n + 1)
+    return (2 * np.sum(index * sorted_vals)) / (n * np.sum(sorted_vals)) - (n + 1) / n
+
+
+def coverage(counts):
+    return sum(1 for v in counts.values() if v > 0)
+
+
+def mode_relation(counts):
+    return max(counts.items(), key=lambda x: x[1])[0] if counts else None
+
+
+def stddev(counts):
+    values = list(counts.values())
+    return float(np.std(values)) if values else 0.0
 
 
 def chi_square_uniform(counts):
@@ -18,67 +45,112 @@ def chi_square_uniform(counts):
     n = len(observed)
     if n <= 1 or sum(observed) == 0:
         return 1.0
-
-    expected = [sum(observed) / n] * n
-    expected = [max(e, 1e-6) for e in expected]
-
-    chi2, p_value = stats.chisquare(observed, expected)
-    return p_value
+    expected = [max(sum(observed) / n, 1e-6)] * n
+    _, p = stats.chisquare(observed, expected)
+    return p
 
 
 def chi_square_against_theory(observed, expected_dict):
-    total_observed = sum(observed.values())
-    if total_observed == 0:
+    total = sum(observed.values())
+    if total == 0:
         return 1.0
-
-    observed_counts = [observed.get(rel, 0) for rel in c.ALLEN_RELATIONS]
-
-    expected_counts = [
-        expected_dict.get(rel, 0) * total_observed for rel in c.ALLEN_RELATIONS
-    ]
-
-    if sum(expected_counts) == 0:
-        return 1.0
-
-    epsilon = 1e-6
-    expected_counts = [max(e, epsilon) for e in expected_counts]
-
-    chi2, p_value = stats.chisquare(observed_counts, expected_counts)
-    return p_value
+    obs = [observed.get(rel, 0) for rel in c.ALLEN_RELATIONS]
+    exp = [max(expected_dict.get(rel, 0) * total, 1e-5) for rel in c.ALLEN_RELATIONS]
+    _, p = stats.chisquare(obs, exp)
+    return p
 
 
-def point_meet_start_vs_overlap_during(counts):
-    pms_sum = sum(counts.get(rel, 0) for rel in ["p", "m", "s"])
-    od_sum = sum(counts.get(rel, 0) for rel in ["o", "d"])
-
-    if od_sum == 0:
-        return float("inf")
-
-    return pms_sum / od_sum
-
-
-def combineInv(dic):
-    temp = {}
-    temp[c.BEFORE] = dic.get(c.BEFORE, 0) + dic.get(c.AFTER, 0)
-    temp[c.MEETS] = dic.get(c.MEETS, 0) + dic.get(c.MET_BY, 0)
-    temp[c.OVERLAPS] = dic.get(c.OVERLAPS, 0) + dic.get(c.OVERLAPPED_BY, 0)
-    temp[c.FINISHED_BY] = dic.get(c.FINISHED_BY, 0)
-    temp[c.CONTAINS] = dic.get(c.CONTAINS, 0)
-    temp[c.STARTS] = dic.get(c.STARTS, 0) + dic.get(c.STARTED_BY, 0)
-    temp[c.EQUALS] = dic.get(c.EQUALS, 0)
-    temp[c.STARTED_BY] = dic.get(c.STARTED_BY, 0)
-    temp[c.DURING] = dic.get(c.DURING, 0) + dic.get(c.CONTAINS, 0)
-    temp[c.FINISHES] = dic.get(c.FINISHES, 0)
-    temp[c.OVERLAPPED_BY] = dic.get(c.OVERLAPPED_BY, 0)
-    temp[c.MET_BY] = dic.get(c.MET_BY, 0)
-    temp[c.AFTER] = dic.get(c.AFTER, 0)
-    return temp
+def kl_divergence(observed, expected_dict):
+    total = sum(observed.values())
+    if total == 0:
+        return 0.0
+    obs = [max(observed.get(rel, 0) / total, 1e-10) for rel in c.ALLEN_RELATIONS]
+    exp = [max(expected_dict.get(rel, 0), 1e-10) for rel in c.ALLEN_RELATIONS]
+    return float(stats.entropy(obs, exp))
 
 
-def describe(counts):
+def js_divergence(observed, expected_dict):
+    total = sum(observed.values())
+    if total == 0:
+        return 0.0
+    obs = np.array([observed.get(rel, 0) / total for rel in c.ALLEN_RELATIONS])
+    exp = np.array([expected_dict.get(rel, 0) for rel in c.ALLEN_RELATIONS])
+    epsilon = 1e-10
+    obs = np.clip(obs, epsilon, 1)
+    exp = np.clip(exp, epsilon, 1)
+    return float(jensenshannon(obs, exp) ** 2)
+
+
+def describe_global(counts, expected_dict=None):
     return {
         "entropy": entropy(counts),
-        "chi_square_p_value": chi_square_uniform(counts),
-        "pms_od_ratio": point_meet_start_vs_overlap_during(counts),
+        "gini": gini(counts),
+        "coverage": coverage(counts),
+        "mode": mode_relation(counts),
+        "stddev": stddev(counts),
+        "chi_square_uniform": chi_square_uniform(counts),
+        "chi_square_theory": (
+            chi_square_against_theory(counts, expected_dict) if expected_dict else None
+        ),
+        "kl_divergence": (
+            kl_divergence(counts, expected_dict) if expected_dict else None
+        ),
+        "js_divergence": (
+            js_divergence(counts, expected_dict) if expected_dict else None
+        ),
         "total_count": sum(counts.values()),
     }
+
+
+# ===============================================
+# COMPOSITION TABLE CELL STATISTICS
+# ===============================================
+
+
+def normalized_entropy(counts):
+    max_entropy = math.log2(len([v for v in counts.values() if v > 0]) or 1)
+    return entropy(counts) / max_entropy if max_entropy > 0 else 0.0
+
+
+def top_k(counts, k=3):
+    return sorted(counts.items(), key=lambda x: x[1], reverse=True)[:k]
+
+
+def describe_cell(counts):
+    return {
+        "entropy": entropy(counts),
+        "normalized_entropy": normalized_entropy(counts),
+        "gini": gini(counts),
+        "coverage": coverage(counts),
+        "top_3": top_k(counts, k=3),
+        "mode": mode_relation(counts),
+        "stddev": stddev(counts),
+        "total_count": sum(counts.values()),
+    }
+
+
+# ===============================================
+# LEGACY / EXPERIMENTAL (disabled for now)
+# ===============================================
+
+# def precedes_meet_start_vs_overlap_during(counts):
+#     pms = sum(counts.get(rel, 0) for rel in ["p", "m", "s"])
+#     od = sum(counts.get(rel, 0) for rel in ["o", "d"])
+#     return float("inf") if od == 0 else pms / od
+
+# def combineInv(dic):
+#     return {
+#         c.BEFORE: dic.get(c.BEFORE, 0) + dic.get(c.AFTER, 0),
+#         c.MEETS: dic.get(c.MEETS, 0) + dic.get(c.MET_BY, 0),
+#         c.OVERLAPS: dic.get(c.OVERLAPS, 0) + dic.get(c.OVERLAPPED_BY, 0),
+#         c.FINISHED_BY: dic.get(c.FINISHED_BY, 0),
+#         c.CONTAINS: dic.get(c.CONTAINS, 0),
+#         c.STARTS: dic.get(c.STARTS, 0) + dic.get(c.STARTED_BY, 0),
+#         c.EQUALS: dic.get(c.EQUALS, 0),
+#         c.STARTED_BY: dic.get(c.STARTED_BY, 0),
+#         c.DURING: dic.get(c.DURING, 0) + dic.get(c.CONTAINS, 0),
+#         c.FINISHES: dic.get(c.FINISHES, 0),
+#         c.OVERLAPPED_BY: dic.get(c.OVERLAPPED_BY, 0),
+#         c.MET_BY: dic.get(c.MET_BY, 0),
+#         c.AFTER: dic.get(c.AFTER, 0),
+#     }
