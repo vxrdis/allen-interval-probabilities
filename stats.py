@@ -129,6 +129,12 @@ def describe_cell(counts):
     }
 
 
+if __name__ == "__main__":
+    dummy = {rel: i for i, rel in enumerate(c.ALLEN_RELATIONS)}
+    print(describe_global(dummy))
+    print(describe_cell(dummy))
+
+
 # ===============================================
 # LEGACY / EXPERIMENTAL (disabled for now)
 # ===============================================
