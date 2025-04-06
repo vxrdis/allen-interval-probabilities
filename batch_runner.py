@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 import time
 from pathlib import Path
 from itertools import product
@@ -12,26 +13,24 @@ from stats import describe_global
 
 DEFAULT_TRIALS = 500
 DEFAULT_OUTPUT = "sim_results.json"
-DEFAULT_PROB_VALUES = [0.001, 0.01, 0.05, 0.1, 0.2, 0.5]
+DEFAULT_P_VALUES = [0.001, 0.01, 0.05, 0.1, 0.2, 0.5]
 
 
 class InfEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, float) and not obj.isfinite():
+        if isinstance(obj, float) and not math.isfinite():
             return "Infinity" if obj > 0 else "-Infinity"
         return super().default(obj)
 
 
-def parse_probabilities(raw: str) -> list[float]:
+def parse_p_values(raw):
     try:
         return [float(x.strip()) for x in raw.split(",") if x.strip()]
     except ValueError:
-        raise argparse.ArgumentTypeError(
-            "Invalid --p-values. Use comma-separated floats."
-        )
+        raise argparse.ArgumentTypeError("Invalid p-values format.")
 
 
-def collect_stats(counts: dict) -> dict:
+def collect_stats(counts):
     refs = {
         "uniform": describe_global(counts),
         "suliman": describe_global(counts, c.SULIMAN_DISTRIBUTION),
@@ -40,94 +39,85 @@ def collect_stats(counts: dict) -> dict:
 
     best_fit = min(
         (
-            (name, stats["js_divergence"])
+            (name, stats.get("js_divergence"))
             for name, stats in refs.items()
-            if stats["js_divergence"] is not None
+            if stats.get("js_divergence") is not None
         ),
         key=lambda x: x[1],
         default=(None, None),
     )[0]
 
-    def clean(d):
-        return {
-            "chi2_p": (
-                round(d["chi_square_theory"], 4)
-                if d.get("chi_square_theory") is not None
-                else None
-            ),
-            "kl": (
-                round(d["kl_divergence"], 4)
-                if d.get("kl_divergence") is not None
-                else None
-            ),
-            "js": (
-                round(d["js_divergence"], 4)
-                if d.get("js_divergence") is not None
-                else None
-            ),
-        }
+    metrics = ["chi_square_theory", "kl_divergence", "js_divergence"]
+    labels = ["chi2_p", "kl", "js"]
 
-    summary = refs["uniform"]  # same values for entropy, gini, etc.
+    summary = refs["uniform"]
     return {
         "best_fit": best_fit,
         "summary": {
-            "entropy": round(summary["entropy"], 4),
-            "gini": round(summary["gini"], 4),
-            "coverage": summary["coverage"],
-            "mode": summary["mode"],
-            "stddev": round(summary["stddev"], 4),
+            k: (
+                round(summary.get(k, 0), 4)
+                if k not in ["coverage", "mode"]
+                else summary.get(k)
+            )
+            for k in ["entropy", "gini", "coverage", "mode", "stddev"]
         },
-        "compare": {k: clean(v) for k, v in refs.items()},
+        "compare": {
+            name: {
+                short: (
+                    round(stats.get(metric, 0), 4)
+                    if stats.get(metric) is not None
+                    else None
+                )
+                for short, metric in zip(labels, metrics)
+            }
+            for name, stats in refs.items()
+        },
     }
 
 
-def run_batch(trials: int, p_values: list[float], short=False, quiet=False) -> dict:
+def run_batch(trials, p_values, short=False, quiet=False):
     grid = list(product(p_values, repeat=2))
     results = {}
+
     for p, q in tqdm(grid, disable=quiet, desc="Simulating"):
-        counts_raw = arSimulate(p, q, trials)
-        key = f"{p}_{q}"
-        counts_ordered = {rel: counts_raw.get(rel, 0) for rel in c.ALLEN_RELATIONS}
-        result = {
-            "p": p,
-            "q": q,
-            "stats": collect_stats(counts_raw),
-        }
+        counts = arSimulate(p, q, trials)
+        result = {"p": p, "q": q, "stats": collect_stats(counts)}
         if not short:
-            result["counts"] = counts_ordered
-        results[key] = result
+            result["counts"] = {rel: counts.get(rel, 0) for rel in c.ALLEN_RELATIONS}
+        results[f"{p:.6f}_{q:.6f}"] = result
+
     return results
 
 
-def write_output(data: dict, path: Path) -> None:
-    with path.open("w") as f:
-        json.dump(data, f, indent=2, cls=InfEncoder)
-
-
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--trials", type=int)
-    parser.add_argument("--p-values", type=parse_probabilities)
-    parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT)
-    parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--short", action="store_true")
+    parser = argparse.ArgumentParser(description="Run Allen interval simulations")
+    parser.add_argument("--trials", type=int, help="Number of trials per simulation")
+    parser.add_argument("--p-values", type=parse_p_values, help="Probability values")
+    parser.add_argument(
+        "--output", type=str, default=DEFAULT_OUTPUT, help="Output file"
+    )
+    parser.add_argument("--quiet", action="store_true", help="Suppress output")
+    parser.add_argument("--short", action="store_true", help="Omit raw counts")
     args = parser.parse_args()
 
     trials = args.trials or DEFAULT_TRIALS
-    p_values = args.p_values or DEFAULT_PROB_VALUES
+    p_values = args.p_values or DEFAULT_P_VALUES
     out_path = Path(args.output)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not args.quiet:
         n = len(p_values)
-        print(f"Running {n * n} simulations of {trials} trials each...")
+        print(f"Running {n**2} simulations × {trials} trials each")
         print(f"Output: {out_path}")
 
     start = time.time()
-    results = run_batch(trials, p_values, short=args.short, quiet=args.quiet)
-    write_output(results, out_path)
+    results = run_batch(trials, p_values, args.short, args.quiet)
+
+    with out_path.open("w") as f:
+        json.dump(results, f, indent=2, cls=InfEncoder)
 
     if not args.quiet:
-        print(f"\nDone in {time.time() - start:.2f}s. Saved to {out_path}")
+        print(f"\nDone in {time.time()-start:.2f}s — Saved to {out_path.name}")
 
 
 if __name__ == "__main__":
