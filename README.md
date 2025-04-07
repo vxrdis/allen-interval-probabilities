@@ -128,21 +128,19 @@ This repository is structured to clearly delineate between core simulations, ana
 <pre>
 allen-interval-probabilities/
 ├── <a href="./docs/">docs/</a>
-├── <a href="./report/">report/</a>                 <!-- LaTeX thesis report source -->
-├── <a href="./batch_runner.py">batch_runner.py</a>
-├── <a href="./composition_runner.py">composition_runner.py</a>
-├── <a href="./comp_results.py">comp_results.py</a>
-├── <a href="./sim_results.py">sim_results.py</a>
-├── <a href="./simulations.py">simulations.py</a>
-├── <a href="./intervals.py">intervals.py</a>
-├── <a href="./relations.py">relations.py</a>
-├── <a href="./constants.py">constants.py</a>
-├── <a href="./stats.py">stats.py</a>
-├── <a href="./report_generator.py">report_generator.py</a>
-├── <a href="./RESULTS.md">RESULTS.md</a>
 ├── <a href="./COMP_RESULTS.md">COMP_RESULTS.md</a>
 ├── <a href="./SIM_RESULTS.md">SIM_RESULTS.md</a>
-└── <a href="./requirements.txt">requirements.txt</a>
+├── <a href="./constants.py">constants.py</a>
+├── <a href="./intervals.py">intervals.py</a>
+├── <a href="./relations.py">relations.py</a>
+├── <a href="./simulations.py">simulations.py</a>
+├── <a href="./stats.py">stats.py</a>
+├── <a href="./batch_runner.py">batch_runner.py</a>
+├── <a href="./sim_results.py">sim_results.py</a>
+├── <a href="./comp_runner.py">comp_runner.py</a>
+├── <a href="./comp_results.py">comp_results.py</a>
+├── <a href="./requirements.txt">requirements.txt</a>
+└── <a href="./report/">report/</a>
 </pre>
 
 ### Core Components
