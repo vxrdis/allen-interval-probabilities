@@ -27,7 +27,7 @@ def generate_simulation_report(data, output_path):
         f"- **Grid Size:** `{meta.get('runs', 'N/A')} pairs`",
         "\n---\n",
         "| p | q | Entropy | Gini | Stddev | Coverage | Mode | Best Fit | JS (Uniform) | JS (Suliman) | JS (F&#8209;V) |",
-        "|----|----|---------|-------|--------|-----------|------|-----------|--------------|--------------|----------|",
+        "|---|---|---------|------|--------|----------|------|----------|--------------|--------------|----------------|",
     ]
 
     for key in sorted(results.keys()):

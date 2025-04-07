@@ -95,7 +95,7 @@ def generate_composition_report(data, output_path):
             "\n---\n",
             "<sub>In the fractions column, `-` indicates a single outcome with 100% probability. Fractions are limited to denominators `≤ 20`.</sub>",
             "| r1 | r2 | Total | r3 Outcomes (rel → %) | ≈ Fractions |",
-            "|----|----|---------|-----------------------|------------|",
+            "|----|----|-------|-----------------------|-------------|",
         ]
     )
 
