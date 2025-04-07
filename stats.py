@@ -4,9 +4,14 @@ from scipy import stats
 from scipy.spatial.distance import jensenshannon
 import constants as c
 
+
 # ===============================================
 # GLOBAL DISTRIBUTION STATISTICS
 # ===============================================
+
+
+def apply_laplace_smoothing(counts, epsilon=1e-8):
+    return {rel: counts.get(rel, 0) + epsilon for rel in c.ALLEN_RELATIONS}
 
 
 def entropy(counts):
@@ -97,7 +102,10 @@ def js_divergence(observed, expected_dict):
     return float(jensenshannon(obs, exp) ** 2)
 
 
-def describe_global(counts, expected_dict=None):
+def describe_global(counts, expected_dict=None, smooth=False):
+    if smooth:
+        counts = apply_laplace_smoothing(counts)
+
     return {
         "entropy": entropy(counts),
         "gini": gini(counts),
