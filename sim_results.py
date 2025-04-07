@@ -1,7 +1,7 @@
 import json, math
 from pathlib import Path
 
-DEFAULT_INPUT, DEFAULT_OUTPUT = "sim_results.json", "sim_report.md"
+DEFAULT_INPUT, DEFAULT_OUTPUT = "sim_results.json", "SIM_RESULTS.md"
 
 
 def format_number(val, digits=4):
