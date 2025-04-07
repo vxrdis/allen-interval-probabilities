@@ -36,9 +36,9 @@ def parse_p_values(raw):
 
 def collect_stats(counts):
     refs = {
-        "uniform": describe_global(counts),
-        "suliman": describe_global(counts, c.SULIMAN_DISTRIBUTION),
-        "fernando-vogel": describe_global(counts, c.FERNANDO_VOGEL_DISTRIBUTION),
+        "Uniform": describe_global(counts),
+        "Suliman": describe_global(counts, c.SULIMAN_DISTRIBUTION),
+        "F-V": describe_global(counts, c.FERNANDO_VOGEL_DISTRIBUTION),
     }
 
     best_fit = min(
@@ -53,7 +53,7 @@ def collect_stats(counts):
 
     metrics = ["chi_square_theory", "kl_divergence", "js_divergence"]
     labels = ["chi2_p", "kl", "js"]
-    summary = refs["uniform"]
+    summary = refs["Uniform"]
 
     return {
         "best_fit": best_fit,
