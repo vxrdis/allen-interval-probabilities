@@ -128,8 +128,11 @@ This repository is structured to clearly delineate between core simulations, ana
 <pre>
 allen-interval-probabilities/
 ├── <a href="./docs/">docs/</a>
+├── <a href="./report/">report/</a>                 <!-- LaTeX thesis report source -->
 ├── <a href="./batch_runner.py">batch_runner.py</a>
 ├── <a href="./composition_runner.py">composition_runner.py</a>
+├── <a href="./comp_results.py">comp_results.py</a>
+├── <a href="./sim_results.py">sim_results.py</a>
 ├── <a href="./simulations.py">simulations.py</a>
 ├── <a href="./intervals.py">intervals.py</a>
 ├── <a href="./relations.py">relations.py</a>
@@ -137,8 +140,18 @@ allen-interval-probabilities/
 ├── <a href="./stats.py">stats.py</a>
 ├── <a href="./report_generator.py">report_generator.py</a>
 ├── <a href="./RESULTS.md">RESULTS.md</a>
+├── <a href="./COMP_RESULTS.md">COMP_RESULTS.md</a>
+├── <a href="./SIM_RESULTS.md">SIM_RESULTS.md</a>
 └── <a href="./requirements.txt">requirements.txt</a>
 </pre>
+
+### Core Components
+
+- **Simulation Engines**: `batch_runner.py`, `composition_runner.py`, and `simulations.py` implement the stochastic interval simulation logic
+- **Relation Analysis**: `intervals.py` and `relations.py` define the Allen interval relations and operations
+- **Statistical Analysis**: `stats.py` provides comprehensive statistical measures including entropy, chi-square tests, KL divergence, and more
+- **Report Generation**: `comp_results.py` and `sim_results.py` generate formatted reports of simulation results
+- **Thesis Report**: The `report/` directory contains LaTeX source for the formal thesis document, including chapter files for Introduction, State of the Art, and Implementation
 
 ## Usage Instructions
 
@@ -157,20 +170,30 @@ pip install -r requirements.txt
 Simulate basic interval relations empirically by running:
 
 ```bash
-python batch_runner.py
+python batch_runner.py --trials 10000 --pValues 0.1,0.5,0.9
 ```
 
 For advanced interval composition simulations (exploring how Allen relations chain together), use:
 
 ```bash
-python composition_runner.py --trials 500
+python composition_runner.py --trials 10000 --pBorn 0.1 --pDie 0.1
 ```
 
 This will systematically generate all 169 possible relation pairs (13×13) and collect statistics on their compositions.
 
 ### Generating Reports
 
-To automatically generate an updated project report (in Markdown format), execute:
+Generate reports from simulation results:
+
+```bash
+# Generate simulation results report
+python sim_results.py --input sim_results.json --output SIM_RESULTS.md
+
+# Generate composition results report
+python comp_results.py --input comp_results.json --output COMP_RESULTS.md
+```
+
+Or to automatically generate all updated project reports:
 
 ```bash
 python report_generator.py
@@ -237,7 +260,7 @@ This literature review highlights important research gaps that the current proje
 
 ## Documentation and Project Reports
 
-Detailed documentation relevant to this project can be found in the `docs/` directory, structured to clearly separate project-specific documents from foundational literature.
+Detailed documentation relevant to this project can be found in the `docs/` directory, structured to clearly separate project-specific documents from foundational literature. The formal thesis is being developed in the `report/` directory using LaTeX.
 
 ### Project Documents (`docs/`)
 
@@ -283,6 +306,15 @@ Detailed documentation relevant to this project can be found in the `docs/` dire
 
 - [`jurafsky-martin-ch19-temporal.pdf`](./docs/related-work/jurafsky-martin-ch19-temporal.pdf)
   Chapter from Jurafsky & Martin's textbook providing broader NLP context for temporal information extraction.
+
+### Formal Thesis (`report/`)
+
+The LaTeX source for the thesis document follows Trinity College Dublin's style guidelines using the `tcdthesis.sty` template. The report includes:
+
+- Academic writing style guidance (`Introduction.tex`)
+- Literature review framework (`StateOfTheArt.tex`)
+- Implementation details (`Implementation.tex`)
+- Full bibliography and citations
 
 ---
 
@@ -334,42 +366,69 @@ This pattern emerges clearly in simulations at extreme low `p` and `q`, supporti
 
 - **Null Hypothesis:** All entries in Allen's interval composition table are equally probable under random chains (e.g. xRy ∧ yRz ⇒ x?z).
 
-- **Planned Method:**
+- **Method:**
 
-  - Simulations of triple-interval chains will estimate the frequency of inferred compositions
-  - For each pair of input relations (r1, r2), we will track the empirical distribution over resulting compositions r3
+  - Simulations of triple-interval chains estimate the frequency of inferred compositions
+  - For each pair of input relations (r1, r2), we track the empirical distribution over resulting compositions r3
+  - Results are collected in `COMP_RESULTS.md` showing the probability distribution for each composition
 
-- **Goal:** To map the structure of empirical compositions across the full transitivity space.
-  - This will allow us to evaluate how composition outcomes vary with birth and death probabilities
-  - We can determine whether the table exhibits systematic skew or asymmetry
+- **Result:** The composition table exhibits significant structural bias:
+
+  - Certain compositions consistently result in specific relations with high probability
+  - Other compositions show high entropy with diverse possible outcomes
+  - The empirical distributions often deviate from theoretical predictions
+
+- **Statistical Evidence:**
+  - Normalized entropy values quantify uncertainty in composition outcomes
+  - Chi-squared tests confirm non-uniformity of relation distributions
+  - Composition frequencies show clear patterns (as visualized in Table B)
 
 ---
 
 ## Visualisation and Interaction
 
-To effectively communicate findings, **interactive visualisations** using Dash and Plotly are integrated, allowing intuitive exploration of interval relation probabilities and compositional logic.
+To effectively communicate findings, **interactive visualisations** and comprehensive reports are generated, allowing intuitive exploration of interval relation probabilities and compositional logic.
 
-The visualisation components clearly illustrate:
+### Report Types
 
-- Deviations from theoretical expectations
-- Dynamic investigation of parameter effects (like `pBorn` and `pDie`)
-- Probability distributions under varying conditions
+- **SIM_RESULTS.md**: Detailed statistical breakdown of relation probabilities under different parameter settings
 
-For detailed visualisation results and extensive discussion, please refer to the comprehensive `RESULTS.md`.
+  - Includes entropy measures, Gini coefficients, and Jensen-Shannon divergence comparisons
+  - Provides best-fit theoretical model comparisons (uniform, Suliman, Fernando-Vogel)
+  - Presents distribution visualisations in table format with normalized frequency values
+  - Includes parameter sensitivity analysis across different birth/death probability combinations
+
+- **COMP_RESULTS.md**: Comprehensive analysis of composition probabilities
+  - Shows empirical distributions for all 169 possible relation compositions
+  - Includes approximate fraction representations for easier interpretation
+  - Highlights high-entropy vs. deterministic compositions
+  - Provides sorted tables of most common composition patterns
+
+### Statistical Measures
+
+The reports include several key statistical measures:
+
+- **Entropy**: Quantifies uncertainty in relation distributions (higher values indicate more even distributions)
+- **Normalised Entropy**: Entropy scaled to [0,1] range for easier comparison
+- **JS Divergence**: Jensen-Shannon divergence comparing empirical distributions to theoretical models
+- **Chi-Square Tests**: Statistical tests measuring goodness-of-fit to theoretical distributions
+- **Gini Coefficient**: Measures distribution inequality (0 = perfect equality, 1 = maximum inequality)
+
+For detailed results and extensive visualisations, please refer to the generated reports in `SIM_RESULTS.md` and `COMP_RESULTS.md`.
 
 ---
 
 ## Future Work
 
-Planned extensions over the coming days include:
+Current and upcoming developments include:
 
-### Entropy and Information-Theoretic Analysis
+### Entropy and Information-Theoretic Analysis ✓
 
 - Integration of **entropy measures** to quantify the uncertainty in observed distributions
 - Comparisons against baseline distributions (e.g., uniform, theoretical priors)
-- Where appropriate, **KL divergence** may also be explored
+- **KL divergence** and **JS divergence** measures for distribution comparison
 
-### Probabilistic Composition Mining
+### Probabilistic Composition Mining ✓
 
 - Extending simulations to estimate the empirical probabilities of inferred relations
 - Analysing how compositions vary under different stochastic assumptions
@@ -381,11 +440,17 @@ Planned extensions over the coming days include:
 - Developing **interactive dashboards** for exploring parameter spaces
 - Creating comparative visualisations of theoretical vs. empirical distributions
 
-### Statistical Evaluation
+### Statistical Evaluation ✓
 
-- Introducing statistical tests (chi-squared, divergence measures)
-- Assessing how closely empirical results match or deviate from theoretical expectations
-- Conducting **sensitivity analyses** to identify critical parameters
+- Chi-squared tests to assess goodness-of-fit to theoretical distributions
+- Jensen-Shannon and KL divergence measures for distribution comparisons
+- **Sensitivity analyses** to identify critical parameters
+
+### Applications in Natural Language Processing
+
+- Integrating with temporal expression extraction systems
+- Applying probabilistic reasoning to ambiguous temporal references in text
+- Developing hybrid neural-symbolic approaches for temporal understanding
 
 ---
 
