@@ -36,7 +36,7 @@ def parse_p_values(raw):
 
 def collect_stats(counts):
     refs = {
-        "Uniform": describe_global(counts),
+        "Uniform": describe_global(counts, c.UNIFORM_DISTRIBUTION),
         "Suliman": describe_global(counts, c.SULIMAN_DISTRIBUTION),
         "F-V": describe_global(counts, c.FERNANDO_VOGEL_DISTRIBUTION),
     }
