@@ -29,6 +29,40 @@ ALLEN_RELATIONS = [
     AFTER,
 ]
 
+# English names for Allen relations
+RELATION_NAMES = {
+    "p": "Before",
+    "m": "Meets",
+    "o": "Overlaps",
+    "F": "Finished By",
+    "D": "Contains",
+    "s": "Starts",
+    "e": "Equals",
+    "S": "Started By",
+    "d": "During",
+    "f": "Finishes",
+    "O": "Overlapped By",
+    "M": "Met By",
+    "P": "After",
+}
+
+# Relation colors for visualization
+RELATION_COLORS = {
+    "p": "#1f77b4",  # Blue
+    "m": "#ff7f0e",  # Orange
+    "o": "#2ca02c",  # Green
+    "F": "#d62728",  # Red
+    "D": "#9467bd",  # Purple
+    "s": "#8c564b",  # Brown
+    "e": "#e377c2",  # Pink
+    "S": "#7f7f7f",  # Gray
+    "d": "#bcbd22",  # Yellow-green
+    "f": "#17becf",  # Cyan
+    "O": "#aec7e8",  # Light blue
+    "M": "#ffbb78",  # Light orange
+    "P": "#98df8a",  # Light green
+}
+
 # Interval states
 UNBORN = 0
 ALIVE = 1
