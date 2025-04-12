@@ -1,0 +1,1515 @@
+import dash
+from dash import dcc, html, callback, Input, Output, State, dash_table
+import dash_bootstrap_components as dbc
+import plotly.graph_objects as go
+import plotly.express as px
+import numpy as np
+import pandas as pd
+import json
+import math
+from plotly.subplots import make_subplots
+from datetime import datetime
+import plotly.io as pio
+import base64
+from io import BytesIO
+
+# Import required functions and constants
+from simulations import arSimulate
+from stats import entropy, gini, describe_global, js_divergence
+from constants import (
+    ALLEN_RELATIONS,
+    UNIFORM_DISTRIBUTION,
+    FERNANDO_VOGEL_DISTRIBUTION,
+    SULIMAN_DISTRIBUTION,
+    RELATION_NAMES,
+    RELATION_COLORS,
+)
+
+# Initialize the Dash app with Bootstrap styling
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    suppress_callback_exceptions=True,
+)
+
+
+# Helper function for number formatting
+def format_number(val, digits=4):
+    if val is None:
+        return "N/A"
+    if isinstance(val, float):
+        if math.isnan(val):
+            return "NaN"
+        if math.isinf(val):
+            return "∞" if val > 0 else "-∞"
+        return f"{val:.{digits}f}"
+    return str(val)
+
+
+# Calculate standard deviation of distribution
+def calc_stddev(distribution):
+    values = np.array(list(distribution.values()))
+    return np.std(values) * len(values)
+
+
+# Find the mode of a distribution
+def find_mode(distribution):
+    if not distribution:
+        return None
+    max_val = max(distribution.values())
+    for rel, val in distribution.items():
+        if val == max_val:
+            return rel
+    return None
+
+
+# Create the layout with a more compact header and improved styling with proper edge alignment
+app.layout = dbc.Container(
+    [
+        # Redesigned compact header section with properly aligned right edges
+        dbc.Row(
+            [
+                # Left side - Title
+                dbc.Col(
+                    html.H2(
+                        "Probabilities of Allen Interval Relations", className="mt-3"
+                    ),
+                    md=5,
+                ),
+                # Right side - With consistent right alignment that matches other containers
+                dbc.Col(
+                    [
+                        # Badges with better spacing and alignment
+                        html.Div(
+                            [
+                                html.A(
+                                    html.Img(
+                                        src="https://img.shields.io/badge/License-MIT-yellow.svg",
+                                        alt="MIT License",
+                                    ),
+                                    href="https://github.com/vxrdis/allen-interval-probabilities/blob/main/LICENSE",
+                                    className="d-inline-block mx-2",
+                                    style={"textDecoration": "none"},
+                                ),
+                                html.A(
+                                    html.Img(
+                                        src="https://img.shields.io/badge/Python-3.9-blue.svg",
+                                        alt="Python 3.9",
+                                    ),
+                                    href="https://www.python.org/downloads/release/python-396/",
+                                    className="d-inline-block mx-2",
+                                    style={"textDecoration": "none"},
+                                ),
+                                html.A(
+                                    html.Img(
+                                        src="https://img.shields.io/github/last-commit/vxrdis/allen-interval-probabilities",
+                                        alt="Last Commit",
+                                    ),
+                                    href="https://github.com/vxrdis/allen-interval-probabilities/commits/main",
+                                    className="d-inline-block mx-2",
+                                    style={"textDecoration": "none"},
+                                ),
+                                html.A(
+                                    html.Img(
+                                        src="https://img.shields.io/github/repo-size/vxrdis/allen-interval-probabilities",
+                                        alt="Repo Size",
+                                    ),
+                                    href="https://github.com/vxrdis/allen-interval-probabilities",
+                                    className="d-inline-block mx-2",
+                                    style={"textDecoration": "none"},
+                                ),
+                                html.A(
+                                    html.Img(
+                                        src="https://img.shields.io/badge/code%20style-black-000000.svg",
+                                        alt="Code Style: Black",
+                                    ),
+                                    href="https://black.readthedocs.io/en/stable/",
+                                    className="d-inline-block mx-2",
+                                    style={"textDecoration": "none"},
+                                ),
+                            ],
+                            # Remove horizontal padding/margin on the right side
+                            className="d-flex justify-content-end flex-wrap mb-2 pr-0",
+                            style={"paddingRight": "0", "marginRight": "0"},
+                        ),
+                        # Project info with improved alignment
+                        html.Div(
+                            [
+                                html.Small(
+                                    [
+                                        "A ",
+                                        html.A(
+                                            "Final Year Project",
+                                            href="https://projects.scss.tcd.ie",
+                                            target="_blank",
+                                            rel="noopener noreferrer",
+                                            className="text-decoration-none",
+                                            style={
+                                                "color": "#007bff",
+                                                "fontWeight": "500",
+                                            },
+                                        ),
+                                        " by ",
+                                        html.Strong("Cillín Forrester"),
+                                        " under supervision of Dr ",
+                                        html.A(
+                                            "Tim Fernando",
+                                            href="https://www.scss.tcd.ie/Tim.Fernando/",
+                                            target="_blank",
+                                            rel="noopener noreferrer",
+                                            className="text-decoration-none",
+                                            style={
+                                                "color": "#007bff",
+                                                "fontWeight": "500",
+                                            },
+                                        ),
+                                        ", ",
+                                        html.A(
+                                            "School of Computer Science and Statistics",
+                                            href="https://www.tcd.ie/scss/",
+                                            target="_blank",
+                                            rel="noopener noreferrer",
+                                            className="text-decoration-none",
+                                            style={
+                                                "color": "#007bff",
+                                                "fontWeight": "500",
+                                            },
+                                        ),
+                                    ],
+                                    className="text-muted",
+                                ),
+                            ],
+                            # Remove horizontal padding/margin on the right side
+                            className="d-flex justify-content-end pr-0",
+                            style={"paddingRight": "0", "marginRight": "0"},
+                        ),
+                    ],
+                    md=7,
+                    # Fix the column padding to match the card containers
+                    className="px-3",  # Match Bootstrap's default card padding
+                ),
+            ],
+            # Match the row padding to the card containers
+            className="border-bottom pb-2 mb-3 mx-0",
+            style={"marginRight": "0"},
+        ),
+        # Main content rows
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        dbc.Card(
+                            [
+                                dbc.CardHeader("Simulation Parameters"),
+                                dbc.CardBody(
+                                    [
+                                        html.Label("Birth Probability (pBorn):"),
+                                        dcc.Slider(
+                                            id="p-born-slider",
+                                            min=0.0,
+                                            max=1.0,
+                                            step=0.05,
+                                            value=0.5,
+                                            marks={
+                                                i / 10: f"{i/10:.1f}" for i in range(11)
+                                            },
+                                            tooltip={
+                                                "placement": "bottom",
+                                                "always_visible": True,
+                                            },
+                                            className="mb-4",
+                                        ),
+                                        html.Label("Death Probability (pDie):"),
+                                        dcc.Slider(
+                                            id="p-die-slider",
+                                            min=0.0,
+                                            max=1.0,
+                                            step=0.05,
+                                            value=0.5,
+                                            marks={
+                                                i / 10: f"{i/10:.1f}" for i in range(11)
+                                            },
+                                            tooltip={
+                                                "placement": "bottom",
+                                                "always_visible": True,
+                                            },
+                                            className="mb-4",
+                                        ),
+                                        html.Label("Number of Trials:"),
+                                        dbc.Input(
+                                            id="trials-input",
+                                            type="number",
+                                            min=100,
+                                            step=100,
+                                            value=1000,
+                                            className="mb-4",
+                                        ),
+                                        dbc.Button(
+                                            "Run Simulation",
+                                            id="run-button",
+                                            color="primary",
+                                            size="lg",
+                                            className="w-100 mb-2",
+                                        ),
+                                        dbc.Button(
+                                            "Export Results as CSV",
+                                            id="export-csv-button",
+                                            color="secondary",
+                                            size="sm",
+                                            className="w-100 mt-2",
+                                        ),
+                                        dbc.Button(
+                                            "Export Results as JSON",
+                                            id="export-json-button",
+                                            color="info",
+                                            size="sm",
+                                            className="w-100 mt-2",
+                                        ),
+                                    ]
+                                ),
+                            ]
+                        ),
+                        dbc.Card(
+                            [
+                                dbc.CardHeader("Simulation History"),
+                                dbc.CardBody(
+                                    [
+                                        html.Div(id="history-summary"),
+                                        html.P(
+                                            "Total runs: ",
+                                            className="mb-0 mt-2 font-weight-bold",
+                                        ),
+                                        html.Span(id="total-runs", children="0"),
+                                        html.P(
+                                            "Last run: ",
+                                            className="mb-0 mt-2 font-weight-bold",
+                                        ),
+                                        html.Span(id="last-run-time", children="None"),
+                                        html.Div(
+                                            [
+                                                html.Hr(className="my-2"),
+                                                html.P(
+                                                    "Model Fit Analysis:",
+                                                    className="mb-0 mt-2 font-weight-bold",
+                                                ),
+                                                dbc.Alert(
+                                                    id="best-fit-detail",
+                                                    color="info",
+                                                    className="mt-1 p-2",
+                                                    children="No simulation yet",
+                                                ),
+                                            ],
+                                            className="mt-2",
+                                        ),
+                                    ]
+                                ),
+                            ],
+                            className="mt-3",
+                        ),
+                        # Add the entropy heatmap below Simulation History
+                        dbc.Card(
+                            [
+                                dbc.CardHeader("Entropy Heatmap"),
+                                dbc.CardBody(
+                                    [
+                                        html.P(
+                                            "Heat map shows entropy across parameter space",
+                                            className="text-muted small mb-2",
+                                        ),
+                                        dcc.Graph(
+                                            id="entropy-heatmap",
+                                            config={"displayModeBar": False},
+                                            style={"height": "250px"},
+                                        ),
+                                    ]
+                                ),
+                            ],
+                            className="mt-3",
+                        ),
+                    ],
+                    md=4,
+                ),
+                dbc.Col(
+                    [
+                        dbc.Spinner(
+                            children=[
+                                dbc.Card(
+                                    [
+                                        dbc.CardHeader("Relation Distribution"),
+                                        dbc.CardBody(
+                                            [
+                                                dbc.Row(
+                                                    [
+                                                        dbc.Col(
+                                                            html.Label(
+                                                                "Show reference models:",
+                                                                className="font-weight-bold mr-2",
+                                                            ),
+                                                            width="auto",
+                                                        ),
+                                                        dbc.Col(
+                                                            dcc.Checklist(
+                                                                id="model-checklist",
+                                                                options=[
+                                                                    {
+                                                                        "label": "Uniform",
+                                                                        "value": "Uniform",
+                                                                    },
+                                                                    {
+                                                                        "label": "Fernando-Vogel",
+                                                                        "value": "Fernando-Vogel",
+                                                                    },
+                                                                    {
+                                                                        "label": "Suliman",
+                                                                        "value": "Suliman",
+                                                                    },
+                                                                ],
+                                                                value=[],
+                                                                inline=True,
+                                                                className="mb-2",
+                                                                inputStyle={
+                                                                    "margin-right": "5px"
+                                                                },
+                                                                labelStyle={
+                                                                    "margin-right": "15px"
+                                                                },
+                                                            ),
+                                                        ),
+                                                        # Add sorting checkbox
+                                                        dbc.Col(
+                                                            dcc.Checklist(
+                                                                id="sort-checkbox",
+                                                                options=[
+                                                                    {
+                                                                        "label": "Sort relations by frequency",
+                                                                        "value": "sort",
+                                                                    }
+                                                                ],
+                                                                value=[],
+                                                                inline=True,
+                                                                className="mb-2",
+                                                                inputStyle={
+                                                                    "margin-right": "5px"
+                                                                },
+                                                            ),
+                                                            width=True,
+                                                            className="text-right",
+                                                        ),
+                                                    ],
+                                                    className="mb-3 d-flex align-items-center",
+                                                ),
+                                                dcc.Graph(id="relation-chart"),
+                                                dbc.Row(
+                                                    [
+                                                        dbc.Col(
+                                                            html.Div(
+                                                                id="mode-display",
+                                                                className="mt-2 text-muted",
+                                                                style={
+                                                                    "font-size": "0.9rem"
+                                                                },
+                                                            ),
+                                                            width="auto",
+                                                        ),
+                                                        dbc.Col(
+                                                            html.Div(
+                                                                dbc.Button(
+                                                                    "Export as PNG",
+                                                                    id="export-button",
+                                                                    color="secondary",
+                                                                    className="mt-2",
+                                                                ),
+                                                                className="d-flex justify-content-end",
+                                                            ),
+                                                            width=True,
+                                                        ),
+                                                    ],
+                                                    className="d-flex justify-content-between align-items-center",
+                                                ),
+                                            ]
+                                        ),
+                                    ],
+                                    className="mb-3",
+                                ),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                dbc.Card(
+                                                    [
+                                                        dbc.CardHeader("Entropy"),
+                                                        dbc.CardBody(
+                                                            html.H3(
+                                                                id="entropy-value",
+                                                                className="text-center",
+                                                            )
+                                                        ),
+                                                    ]
+                                                )
+                                            ],
+                                            md=3,
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                dbc.Card(
+                                                    [
+                                                        dbc.CardHeader(
+                                                            "Gini Coefficient"
+                                                        ),
+                                                        dbc.CardBody(
+                                                            html.H3(
+                                                                id="gini-value",
+                                                                className="text-center",
+                                                            )
+                                                        ),
+                                                    ]
+                                                )
+                                            ],
+                                            md=3,
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                dbc.Card(
+                                                    [
+                                                        dbc.CardHeader("Std Dev"),
+                                                        dbc.CardBody(
+                                                            html.H3(
+                                                                id="stddev-value",
+                                                                className="text-center",
+                                                            )
+                                                        ),
+                                                    ]
+                                                )
+                                            ],
+                                            md=3,
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                dbc.Card(
+                                                    [
+                                                        dbc.CardHeader("Best Fit"),
+                                                        dbc.CardBody(
+                                                            html.Div(
+                                                                id="best-fit-value",
+                                                                className="text-center",
+                                                            )
+                                                        ),
+                                                    ]
+                                                )
+                                            ],
+                                            md=3,
+                                        ),
+                                    ],
+                                    className="mb-3",
+                                ),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                dbc.Card(
+                                                    [
+                                                        dbc.CardHeader("JS (Uniform)"),
+                                                        dbc.CardBody(
+                                                            html.H4(
+                                                                id="js-uniform-value",
+                                                                className="text-center",
+                                                            )
+                                                        ),
+                                                    ]
+                                                )
+                                            ],
+                                            md=4,
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                dbc.Card(
+                                                    [
+                                                        dbc.CardHeader("JS (F-V)"),
+                                                        dbc.CardBody(
+                                                            html.H4(
+                                                                id="js-fv-value",
+                                                                className="text-center",
+                                                            )
+                                                        ),
+                                                    ]
+                                                )
+                                            ],
+                                            md=4,
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                dbc.Card(
+                                                    [
+                                                        dbc.CardHeader("JS (Suliman)"),
+                                                        dbc.CardBody(
+                                                            html.H4(
+                                                                id="js-suliman-value",
+                                                                className="text-center",
+                                                            )
+                                                        ),
+                                                    ]
+                                                )
+                                            ],
+                                            md=4,
+                                        ),
+                                    ],
+                                    className="mb-3",
+                                ),
+                                dbc.Card(
+                                    [
+                                        dbc.CardHeader("Metrics History"),
+                                        dbc.CardBody(dcc.Graph(id="metrics-chart")),
+                                    ],
+                                    className="mb-3",
+                                ),
+                                dbc.Card(
+                                    [
+                                        dbc.CardHeader("Detailed Results"),
+                                        dbc.CardBody(
+                                            dash_table.DataTable(
+                                                id="results-table",
+                                                columns=[
+                                                    {
+                                                        "name": "Relation",
+                                                        "id": "relation",
+                                                    },
+                                                    {"name": "Name", "id": "name"},
+                                                    {"name": "Count", "id": "count"},
+                                                    {
+                                                        "name": "Probability",
+                                                        "id": "probability",
+                                                    },
+                                                ],
+                                                style_table={"overflowX": "auto"},
+                                                style_cell={
+                                                    "textAlign": "left",
+                                                    "padding": "8px",
+                                                },
+                                                style_header={
+                                                    "backgroundColor": "#f8f9fa",
+                                                    "fontWeight": "bold",
+                                                },
+                                                style_data_conditional=[
+                                                    {
+                                                        "if": {"state": "selected"},
+                                                        "backgroundColor": "#e6f2ff",
+                                                        "border": "1px solid #ccc",
+                                                    }
+                                                ],
+                                            )
+                                        ),
+                                    ]
+                                ),
+                            ],
+                            id="loading-spinner",
+                            type="border",
+                            fullscreen=False,
+                            color="primary",
+                        )
+                    ],
+                    md=8,
+                ),
+            ]
+        ),
+        dcc.Store(id="simulation-results"),
+        dcc.Store(
+            id="metrics-history",
+            data={
+                "runs": [],
+                "entropy": [],
+                "gini": [],
+                "stddev": [],
+                "best_fit": [],
+                "js_uniform": [],
+                "js_fv": [],
+                "js_suliman": [],
+                "timestamps": [],
+                "params": [],
+            },
+        ),
+        # Add a new store for heatmap data
+        dcc.Store(
+            id="heatmap-data",
+            data={
+                "p_values": [],
+                "q_values": [],
+                "entropy_values": [],
+                "run_counts": [],
+            },
+        ),
+        dcc.Store(id="download-data"),
+        dcc.Download(id="download-png"),
+        dcc.Download(id="download-csv"),
+        dcc.Download(id="download-json"),
+    ],
+    fluid=True,
+    className="p-4",
+)
+
+
+@app.callback(
+    Output("simulation-results", "data"),
+    Output("loading-spinner", "children", allow_duplicate=True),
+    Output("last-run-time", "children"),
+    Input("run-button", "n_clicks"),
+    State("p-born-slider", "value"),
+    State("p-die-slider", "value"),
+    State("trials-input", "value"),
+    prevent_initial_call=True,
+)
+def run_simulation(n_clicks, p_born, p_die, trials):
+    if n_clicks is None:
+        return {}, dash.no_update, dash.no_update
+
+    counts = arSimulate(p_born, p_die, trials)
+    total = sum(counts.values())
+    distribution = {
+        key: value / total if total > 0 else 0 for key, value in counts.items()
+    }
+
+    js_uniform = js_divergence(distribution, UNIFORM_DISTRIBUTION)
+    js_fv = js_divergence(distribution, FERNANDO_VOGEL_DISTRIBUTION)
+    js_suliman = js_divergence(distribution, SULIMAN_DISTRIBUTION)
+
+    min_js = min(js_uniform, js_fv, js_suliman)
+    if min_js == js_uniform:
+        best_fit = "Uniform"
+        best_fit_js = js_uniform
+    elif min_js == js_fv:
+        best_fit = "Fernando-Vogel"
+        best_fit_js = js_fv
+    else:
+        best_fit = "Suliman"
+        best_fit_js = js_suliman
+
+    mode_relation = find_mode(distribution)
+    stddev = calc_stddev(distribution)
+    coverage = sum(1 for val in distribution.values() if val > 0)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    results = {
+        "distribution": distribution,
+        "raw_counts": counts,
+        "parameters": {"p_born": p_born, "p_die": p_die, "trials": trials},
+        "stats": {
+            "mode": mode_relation,
+            "mode_name": RELATION_NAMES.get(mode_relation, "Unknown"),
+            "stddev": stddev,
+            "coverage": coverage,
+            "best_fit": best_fit,
+            "best_fit_js": best_fit_js,
+            "js_uniform": js_uniform,
+            "js_fv": js_fv,
+            "js_suliman": js_suliman,
+            "timestamp": timestamp,
+        },
+    }
+    return results, dash.no_update, timestamp
+
+
+@app.callback(
+    Output("relation-chart", "figure"),
+    Output("entropy-value", "children"),
+    Output("gini-value", "children"),
+    Output("stddev-value", "children"),
+    Output("best-fit-value", "children"),
+    Output("js-uniform-value", "children"),
+    Output("js-fv-value", "children"),
+    Output("js-suliman-value", "children"),
+    Output("metrics-history", "data"),
+    Output("metrics-chart", "figure"),
+    Output("results-table", "data"),
+    Output("total-runs", "children"),
+    Output("download-data", "data"),
+    Output("best-fit-detail", "children"),
+    Output("mode-display", "children"),
+    Output("heatmap-data", "data"),  # Add this output
+    Input("simulation-results", "data"),
+    Input("model-checklist", "value"),
+    Input("sort-checkbox", "value"),  # Add sort checkbox input
+    State("metrics-history", "data"),
+    State("heatmap-data", "data"),  # Add this state
+    prevent_initial_call=True,
+)
+def update_results(results, selected_models, sort_by, metrics_history, heatmap_data):
+    if not results:
+        empty_fig = go.Figure()
+        empty_fig.update_layout(
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        )
+        empty_table = []
+        return (
+            empty_fig,
+            "N/A",
+            "N/A",
+            "N/A",
+            html.Div("N/A", className="text-center"),
+            "N/A",
+            "N/A",
+            "N/A",
+            metrics_history,
+            empty_fig,
+            empty_table,
+            "0",
+            {},
+            "No simulation yet",
+            "",
+            heatmap_data,  # Return unchanged heatmap data
+        )
+
+    distribution = results.get("distribution", {})
+    raw_counts = results.get("raw_counts", {})
+    parameters = results.get("parameters", {})
+    stats = results.get("stats", {})
+    entropy_val = entropy(distribution)
+    gini_val = gini(distribution)
+    stddev = stats.get("stddev", 0)
+    best_fit = stats.get("best_fit", "N/A")
+    best_fit_js = stats.get("best_fit_js", 0)
+    js_uniform = stats.get("js_uniform", 0)
+    js_fv = stats.get("js_fv", 0)
+    js_suliman = stats.get("js_suliman", 0)
+    timestamp = stats.get("timestamp", "")
+    run_count = len(metrics_history["runs"]) + 1
+    metrics_history["runs"].append(run_count)
+    metrics_history["entropy"].append(entropy_val)
+    metrics_history["gini"].append(gini_val)
+    metrics_history["stddev"].append(stddev)
+    metrics_history["best_fit"].append(best_fit)
+    metrics_history["js_uniform"].append(js_uniform)
+    metrics_history["js_fv"].append(js_fv)
+    metrics_history["js_suliman"].append(js_suliman)
+    metrics_history["timestamps"].append(timestamp)
+    metrics_history["params"].append(
+        f"p={parameters.get('p_born', 0):.2f}, q={parameters.get('p_die', 0):.2f}"
+    )
+    relation_fig = go.Figure()
+    allen_relations_list = list(ALLEN_RELATIONS)
+
+    # Sort by frequency if requested
+    if "sort" in sort_by:
+        relation_value_pairs = [
+            (rel, distribution.get(rel, 0)) for rel in allen_relations_list
+        ]
+        relation_value_pairs.sort(key=lambda x: x[1], reverse=True)
+        allen_relations_list = [pair[0] for pair in relation_value_pairs]
+
+    relation_names = [RELATION_NAMES.get(rel, rel) for rel in allen_relations_list]
+    sim_values = [distribution.get(rel, 0) for rel in allen_relations_list]
+    colors = [RELATION_COLORS.get(rel, "#000000") for rel in allen_relations_list]
+
+    mode_relation = stats.get("mode", "")
+    mode_name = stats.get("mode_name", "")
+    mode_value = 0
+    mode_color = ""
+
+    if mode_relation in distribution:
+        mode_value = distribution[mode_relation]
+        mode_color = RELATION_COLORS.get(mode_relation, "#777777")
+
+    mode_display = (
+        html.Div(
+            [
+                html.Span("Mode: ", className="font-weight-bold"),
+                html.Span(
+                    mode_name,
+                    style={
+                        "color": mode_color,
+                        "font-weight": "bold",
+                        "padding": "0 4px",
+                        "border-bottom": f"2px solid {mode_color}",
+                    },
+                ),
+                html.Span(
+                    f" ({format_number(mode_value, digits=3)})",
+                    style={
+                        "color": mode_color,
+                    },
+                ),
+            ],
+            style={"margin-top": "6px"},
+        )
+        if mode_relation
+        else ""
+    )
+
+    relation_fig.add_trace(
+        go.Bar(
+            x=relation_names,
+            y=sim_values,
+            name="Simulation",
+            marker_color=colors,
+            text=sim_values,
+            texttemplate="%{y:.3f}",
+            textposition="outside",
+            hovertemplate="%{x}: %{y:.4f}<extra></extra>",
+        )
+    )
+    if "Uniform" in selected_models:
+        relation_fig.add_trace(
+            go.Scatter(
+                x=relation_names,
+                y=[UNIFORM_DISTRIBUTION.get(rel, 0) for rel in allen_relations_list],
+                mode="lines+markers",
+                name="Uniform",
+                line=dict(color="black", width=2, dash="dash"),
+                marker=dict(size=6, color="black"),
+            )
+        )
+    if "Fernando-Vogel" in selected_models:
+        relation_fig.add_trace(
+            go.Scatter(
+                x=relation_names,
+                y=[
+                    FERNANDO_VOGEL_DISTRIBUTION.get(rel, 0)
+                    for rel in allen_relations_list
+                ],
+                mode="lines+markers",
+                name="Fernando-Vogel",
+                line=dict(color="black", width=2, dash="dot"),
+                marker=dict(size=6, symbol="diamond", color="black"),
+            )
+        )
+    if "Suliman" in selected_models:
+        relation_fig.add_trace(
+            go.Scatter(
+                x=relation_names,
+                y=[SULIMAN_DISTRIBUTION.get(rel, 0) for rel in allen_relations_list],
+                mode="lines+markers",
+                name="Suliman",
+                line=dict(color="black", width=2, dash="dashdot"),
+                marker=dict(size=6, symbol="square", color="black"),
+            )
+        )
+    relation_fig.update_layout(
+        title=f"Allen Relation Distribution (p={parameters.get('p_born', 0):.2f}, q={parameters.get('p_die', 0):.2f}, n={parameters.get('trials', 0)})",
+        xaxis_title="Relation Type",
+        yaxis_title="Probability",
+        legend_title="Source",
+        template="plotly_white",
+        transition_duration=500,
+        height=600,
+        yaxis=dict(
+            range=[0, max(max(sim_values) * 1.1, 0.2)],
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+        xaxis=dict(
+            tickangle=-45,
+        ),
+    )
+    metrics_fig = make_subplots(specs=[[{"secondary_y": True}]])
+    metrics_fig.add_trace(
+        go.Scatter(
+            x=metrics_history["runs"],
+            y=metrics_history["entropy"],
+            mode="lines+markers",
+            name="Entropy",
+            line=dict(color="blue", width=2),
+        ),
+        secondary_y=False,
+    )
+    metrics_fig.add_trace(
+        go.Scatter(
+            x=metrics_history["runs"],
+            y=metrics_history["js_uniform"],
+            mode="lines+markers",
+            name="JS (Uniform)",
+            line=dict(color="green", width=2, dash="dot"),
+            marker=dict(size=6),
+        ),
+        secondary_y=False,
+    )
+    metrics_fig.add_trace(
+        go.Scatter(
+            x=metrics_history["runs"],
+            y=metrics_history["js_fv"],
+            mode="lines+markers",
+            name="JS (F-V)",
+            line=dict(color="purple", width=2, dash="dashdot"),
+            marker=dict(size=6),
+        ),
+        secondary_y=False,
+    )
+    metrics_fig.add_trace(
+        go.Scatter(
+            x=metrics_history["runs"],
+            y=metrics_history["js_suliman"],
+            mode="lines+markers",
+            name="JS (Suliman)",
+            line=dict(color="orange", width=2, dash="dot"),
+            marker=dict(size=6),
+        ),
+        secondary_y=False,
+    )
+    metrics_fig.add_trace(
+        go.Scatter(
+            x=metrics_history["runs"],
+            y=metrics_history["gini"],
+            mode="lines+markers",
+            name="Gini Coefficient",
+            line=dict(color="red", width=2),
+        ),
+        secondary_y=True,
+    )
+    hover_texts = []
+    for i, params in enumerate(metrics_history["params"]):
+        hover_texts.append(
+            f"Run {i+1}<br>{params}<br>{metrics_history['timestamps'][i]}"
+        )
+    for trace in metrics_fig.data:
+        trace.hovertext = hover_texts
+        trace.hovertemplate = "%{hovertext}<br>%{y:.4f}<extra></extra>"
+    metrics_fig.update_layout(
+        title="Metrics Over Simulation Runs",
+        xaxis_title="Run Number",
+        template="plotly_white",
+        transition_duration=500,
+        hovermode="closest",
+        height=400,
+    )
+    metrics_fig.update_yaxes(title_text="Entropy / JS Divergence", secondary_y=False)
+    metrics_fig.update_yaxes(title_text="Gini Coefficient", secondary_y=True)
+    table_data = []
+    for rel in allen_relations_list:
+        table_data.append(
+            {
+                "relation": rel,
+                "name": RELATION_NAMES.get(rel, "Unknown"),
+                "count": raw_counts.get(rel, 0),
+                "probability": format_number(distribution.get(rel, 0)),
+            }
+        )
+    entropy_display = format_number(entropy_val)
+    gini_display = format_number(gini_val)
+    stddev_display = format_number(stddev)
+    js_uniform_display = format_number(js_uniform)
+    js_fv_display = format_number(js_fv)
+    js_suliman_display = format_number(js_suliman)
+
+    badge_color = (
+        "success"
+        if best_fit_js < 0.05
+        else "warning" if best_fit_js < 0.15 else "danger"
+    )
+
+    best_fit_card = html.Div(
+        [
+            dbc.Card(
+                [
+                    dbc.CardBody(
+                        [
+                            html.Div(
+                                [
+                                    html.H4(
+                                        best_fit,
+                                        className="card-title mb-1 text-center",
+                                    ),
+                                    html.Div(
+                                        [
+                                            dbc.Badge(
+                                                f"JS = {format_number(best_fit_js)}",
+                                                color=badge_color,
+                                                className="ml-1",
+                                                id="best-fit-badge",
+                                            ),
+                                        ],
+                                        className="text-center",
+                                    ),
+                                    dbc.Tooltip(
+                                        "Lower JS = better theoretical match",
+                                        target="best-fit-badge",
+                                        placement="bottom",
+                                    ),
+                                ]
+                            )
+                        ],
+                        className="py-2",
+                    )
+                ],
+                className="border-0",
+            )
+        ],
+        className="text-center",
+    )
+
+    js_color = "success"
+    if best_fit_js > 0.1:
+        js_color = "warning"
+    if best_fit_js > 0.2:
+        js_color = "danger"
+
+    best_fit_content = html.Div(
+        [
+            html.Strong(f"Best Fit: {best_fit} "),
+            html.Span(
+                f"(JS = {format_number(best_fit_js)})", className=f"text-{js_color}"
+            ),
+            html.Hr(className="my-2"),
+            html.Div(
+                [
+                    html.Span("Compared to: "),
+                    html.Ul(
+                        [
+                            html.Li(
+                                [
+                                    html.Span("Uniform: "),
+                                    html.Span(
+                                        f"{format_number(js_uniform)}",
+                                        className=f"text-{'success' if js_uniform < 0.1 else 'warning' if js_uniform < 0.2 else 'danger'}",
+                                    ),
+                                ]
+                            ),
+                            html.Li(
+                                [
+                                    html.Span("Fernando-Vogel: "),
+                                    html.Span(
+                                        f"{format_number(js_fv)}",
+                                        className=f"text-{'success' if js_fv < 0.1 else 'warning' if js_fv < 0.2 else 'danger'}",
+                                    ),
+                                ]
+                            ),
+                            html.Li(
+                                [
+                                    html.Span("Suliman: "),
+                                    html.Span(
+                                        f"{format_number(js_suliman)}",
+                                        className=f"text-{'success' if js_suliman < 0.1 else 'warning' if js_suliman < 0.2 else 'danger'}",
+                                    ),
+                                ]
+                            ),
+                        ],
+                        className="mb-0 pl-3",
+                    ),
+                ]
+            ),
+        ]
+    )
+
+    download_data = {
+        "parameters": parameters,
+        "timestamp": timestamp,
+        "metrics": {
+            "entropy": entropy_val,
+            "gini": gini_val,
+            "stddev": stddev,
+            "best_fit": best_fit,
+            "js_uniform": js_uniform,
+            "js_fv": js_fv,
+            "js_suliman": js_suliman,
+            "mode": mode_relation,
+        },
+        "distribution": distribution,
+        "raw_counts": raw_counts,
+    }
+
+    # Update the heatmap data with this run's entropy value
+    p_born = parameters.get("p_born", 0)
+    p_die = parameters.get("p_die", 0)
+
+    # Check if this (p,q) pair already exists in the heatmap data
+    found = False
+    for i in range(len(heatmap_data["p_values"])):
+        if (
+            abs(heatmap_data["p_values"][i] - p_born) < 1e-6
+            and abs(heatmap_data["q_values"][i] - p_die) < 1e-6
+        ):
+            # Update existing data point (running average)
+            count = heatmap_data["run_counts"][i]
+            current_entropy = heatmap_data["entropy_values"][i]
+            # Weighted average based on run count
+            heatmap_data["entropy_values"][i] = (
+                current_entropy * count + entropy_val
+            ) / (count + 1)
+            heatmap_data["run_counts"][i] += 1
+            found = True
+            break
+
+    # If this is a new (p,q) pair, add it to the heatmap data
+    if not found:
+        heatmap_data["p_values"].append(p_born)
+        heatmap_data["q_values"].append(p_die)
+        heatmap_data["entropy_values"].append(entropy_val)
+        heatmap_data["run_counts"].append(1)
+
+    return (
+        relation_fig,
+        entropy_display,
+        gini_display,
+        stddev_display,
+        best_fit_card,
+        js_uniform_display,
+        js_fv_display,
+        js_suliman_display,
+        metrics_history,
+        metrics_fig,
+        table_data,
+        str(run_count),
+        download_data,
+        best_fit_content,
+        mode_display,
+        heatmap_data,  # Include updated heatmap data
+    )
+
+
+@app.callback(
+    Output("relation-chart", "figure", allow_duplicate=True),
+    Output("mode-display", "children", allow_duplicate=True),
+    Input("model-checklist", "value"),
+    Input("sort-checkbox", "value"),  # Add sort checkbox input
+    State("simulation-results", "data"),
+    prevent_initial_call=True,
+)
+def update_chart_models(selected_models, sort_by, results):
+    if not results:
+        empty_fig = go.Figure()
+        empty_fig.update_layout(
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        )
+        return empty_fig, ""
+
+    distribution = results.get("distribution", {})
+    parameters = results.get("parameters", {})
+    stats = results.get("stats", {})
+
+    mode_relation = stats.get("mode", "")
+    mode_name = stats.get("mode_name", "")
+    mode_value = 0
+    mode_color = ""
+    if mode_relation in distribution:
+        mode_value = distribution[mode_relation]
+        mode_color = RELATION_COLORS.get(mode_relation, "#777777")
+
+    mode_display = (
+        html.Div(
+            [
+                html.Span("Mode: ", className="font-weight-bold"),
+                html.Span(
+                    mode_name,
+                    style={
+                        "color": mode_color,
+                        "font-weight": "bold",
+                        "padding": "0 4px",
+                        "border-bottom": f"2px solid {mode_color}",
+                    },
+                ),
+                html.Span(
+                    f" ({format_number(mode_value, digits=3)})",
+                    style={
+                        "color": mode_color,
+                    },
+                ),
+            ],
+            style={"margin-top": "6px"},
+        )
+        if mode_relation
+        else ""
+    )
+
+    allen_relations_list = list(ALLEN_RELATIONS)
+
+    # Sort by frequency if requested
+    if "sort" in sort_by:
+        relation_value_pairs = [
+            (rel, distribution.get(rel, 0)) for rel in allen_relations_list
+        ]
+        relation_value_pairs.sort(key=lambda x: x[1], reverse=True)
+        allen_relations_list = [pair[0] for pair in relation_value_pairs]
+
+    relation_names = [RELATION_NAMES.get(rel, rel) for rel in allen_relations_list]
+    sim_values = [distribution.get(rel, 0) for rel in allen_relations_list]
+    colors = [RELATION_COLORS.get(rel, "#000000") for rel in allen_relations_list]
+
+    relation_fig = go.Figure()
+
+    relation_fig.add_trace(
+        go.Bar(
+            x=relation_names,
+            y=sim_values,
+            name="Simulation",
+            marker_color=colors,
+            text=sim_values,
+            texttemplate="%{y:.3f}",
+            textposition="outside",
+            hovertemplate="%{x}: %{y:.4f}<extra></extra>",
+        )
+    )
+    if "Uniform" in selected_models:
+        relation_fig.add_trace(
+            go.Scatter(
+                x=relation_names,
+                y=[UNIFORM_DISTRIBUTION.get(rel, 0) for rel in allen_relations_list],
+                mode="lines+markers",
+                name="Uniform",
+                line=dict(color="black", width=2, dash="dash"),
+                marker=dict(size=6, color="black"),
+            )
+        )
+    if "Fernando-Vogel" in selected_models:
+        relation_fig.add_trace(
+            go.Scatter(
+                x=relation_names,
+                y=[
+                    FERNANDO_VOGEL_DISTRIBUTION.get(rel, 0)
+                    for rel in allen_relations_list
+                ],
+                mode="lines+markers",
+                name="Fernando-Vogel",
+                line=dict(color="black", width=2, dash="dot"),
+                marker=dict(size=6, symbol="diamond", color="black"),
+            )
+        )
+    if "Suliman" in selected_models:
+        relation_fig.add_trace(
+            go.Scatter(
+                x=relation_names,
+                y=[SULIMAN_DISTRIBUTION.get(rel, 0) for rel in allen_relations_list],
+                mode="lines+markers",
+                name="Suliman",
+                line=dict(color="black", width=2, dash="dashdot"),
+                marker=dict(size=6, symbol="square", color="black"),
+            )
+        )
+    relation_fig.update_layout(
+        title=f"Allen Relation Distribution (p={parameters.get('p_born', 0):.2f}, q={parameters.get('p_die', 0):.2f}, n={parameters.get('trials', 0)})",
+        xaxis_title="Relation Type",
+        yaxis_title="Probability",
+        legend_title="Source",
+        template="plotly_white",
+        transition_duration=500,
+        height=600,
+        yaxis=dict(
+            range=[0, max(max(sim_values) * 1.1, 0.2)],
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+        xaxis=dict(
+            tickangle=-45,
+        ),
+    )
+
+    return relation_fig, mode_display
+
+
+@app.callback(
+    Output("download-png", "data"),
+    Input("export-button", "n_clicks"),
+    State("relation-chart", "figure"),
+    prevent_initial_call=True,
+)
+def export_png(n_clicks, figure):
+    """Export the current figure as a PNG file"""
+    if not n_clicks or not figure:
+        return dash.no_update
+
+    try:
+        # Create a timestamp for unique filenames
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"allen-relation-dist-{timestamp}.png"
+
+        # Convert figure to a PNG image with high quality
+        img_bytes = pio.to_image(figure, format="png", width=1200, height=800, scale=2)
+
+        # Convert binary data to base64 string (required for Dash downloads)
+        img_str = base64.b64encode(img_bytes).decode()
+
+        # Return as downloadable content (correctly formatted for Dash)
+        return dict(content=img_str, filename=filename, type="image/png", base64=True)
+    except Exception as e:
+        print(f"Error exporting PNG: {e}")
+        return dash.no_update
+
+
+@app.callback(
+    Output("download-csv", "data"),
+    Input("export-csv-button", "n_clicks"),
+    State("download-data", "data"),
+    prevent_initial_call=True,
+)
+def export_csv(n_clicks, data):
+    if not n_clicks or not data:
+        return dash.no_update
+    distribution = data.get("distribution", {})
+    parameters = data.get("parameters", {})
+    df = pd.DataFrame(
+        {
+            "relation": list(distribution.keys()),
+            "name": [RELATION_NAMES.get(rel, "Unknown") for rel in distribution.keys()],
+            "probability": list(distribution.values()),
+            "count": [
+                data.get("raw_counts", {}).get(rel, 0) for rel in distribution.keys()
+            ],
+        }
+    )
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    p_born = parameters.get("p_born", 0)
+    p_die = parameters.get("p_die", 0)
+    return dcc.send_data_frame(
+        df.to_csv,
+        f"allen-relations-p{p_born:.2f}-q{p_die:.2f}-{timestamp}.csv",
+        index=False,
+    )
+
+
+@app.callback(
+    Output("download-json", "data"),
+    Input("export-json-button", "n_clicks"),
+    State("download-data", "data"),
+    prevent_initial_call=True,
+)
+def export_json(n_clicks, data):
+    if not n_clicks or not data:
+        return dash.no_update
+    parameters = data.get("parameters", {})
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    p_born = parameters.get("p_born", 0)
+    p_die = parameters.get("p_die", 0)
+    return dict(
+        content=json.dumps(data, indent=2),
+        filename=f"allen-relations-p{p_born:.2f}-q{p_die:.2f}-{timestamp}.json",
+        type="application/json",
+    )
+
+
+@app.callback(
+    Output("loading-spinner", "children"),
+    Input("run-button", "n_clicks"),
+    prevent_initial_call=True,
+)
+def trigger_spinner(n_clicks):
+    if n_clicks is None:
+        raise dash.exceptions.PreventUpdate
+    return dash.no_update
+
+
+@app.callback(
+    Output("history-summary", "children"),
+    Input("metrics-history", "data"),
+    prevent_initial_call=True,
+)
+def update_history_summary(history):
+    if not history or not history.get("runs", []):
+        return "No simulations run yet."
+    run_count = len(history["runs"])
+    if run_count > 0:
+        last_params = history["params"][-1] if history["params"] else "N/A"
+        return [
+            html.P(f"Latest simulation: {last_params}", className="mb-1"),
+            html.P(f"Best fit: {history['best_fit'][-1]}", className="mb-1"),
+        ]
+    return "No simulation data available."
+
+
+@app.callback(
+    Output("entropy-heatmap", "figure"),
+    Input("heatmap-data", "data"),
+    prevent_initial_call=True,
+)
+def update_entropy_heatmap(heatmap_data):
+    # If no data or empty data, return an empty figure with instructions
+    if not heatmap_data or not heatmap_data["p_values"]:
+        fig = go.Figure()
+        fig.update_layout(
+            title="Entropy Heatmap",
+            annotations=[
+                {
+                    "text": "Run simulations to populate the heatmap",
+                    "xref": "paper",
+                    "yref": "paper",
+                    "x": 0.5,
+                    "y": 0.5,
+                    "showarrow": False,
+                    "font": {"size": 14},
+                }
+            ],
+            height=250,
+            margin=dict(l=50, r=20, t=30, b=50),
+        )
+        return fig
+
+    # Extract unique p and q values for the grid
+    unique_p = sorted(list(set([round(p, 2) for p in heatmap_data["p_values"]])))
+    unique_q = sorted(list(set([round(q, 2) for q in heatmap_data["q_values"]])))
+
+    # Create the heatmap data structure
+    heatmap_z = [[None for _ in range(len(unique_p))] for _ in range(len(unique_q))]
+    run_counts_z = [[0 for _ in range(len(unique_p))] for _ in range(len(unique_q))]
+
+    # Populate the grid
+    for i in range(len(heatmap_data["p_values"])):
+        p = heatmap_data["p_values"][i]
+        q = heatmap_data["q_values"][i]
+        entropy_val = heatmap_data["entropy_values"][i]
+        runs = heatmap_data["run_counts"][i]
+
+        # Find indices in the grid
+        p_idx = unique_p.index(round(p, 2))
+        q_idx = unique_q.index(round(q, 2))
+
+        # Set the value
+        heatmap_z[q_idx][p_idx] = entropy_val
+        run_counts_z[q_idx][p_idx] = runs
+
+    # Create the heatmap figure
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=heatmap_z,
+            x=unique_p,
+            y=unique_q,
+            colorscale="Viridis",
+            colorbar=dict(title="Entropy"),
+            hovertemplate="p: %{x:.2f}<br>q: %{y:.2f}<br>Entropy: %{z:.4f}<extra></extra>",
+            zmin=0,
+            zmax=3.7,  # Max theoretical entropy for 13 relations
+        )
+    )
+
+    # Add markers for run counts
+    bubble_sizes = []
+    bubble_x = []
+    bubble_y = []
+    hover_texts = []
+
+    for q_idx, q in enumerate(unique_q):
+        for p_idx, p in enumerate(unique_p):
+            if run_counts_z[q_idx][p_idx] > 0:
+                bubble_x.append(p)
+                bubble_y.append(q)
+                size = min(
+                    run_counts_z[q_idx][p_idx] / 2, 10
+                )  # Scale run count to reasonable size
+                bubble_sizes.append(size)
+                hover_texts.append(f"Runs: {run_counts_z[q_idx][p_idx]}")
+
+    # Add scatter plot to show where simulations have been run
+    fig.add_trace(
+        go.Scatter(
+            x=bubble_x,
+            y=bubble_y,
+            mode="markers",
+            marker=dict(
+                size=bubble_sizes,
+                color="rgba(255, 255, 255, 0.7)",
+                line=dict(color="rgba(0, 0, 0, 0.5)", width=1),
+            ),
+            hoverinfo="text",
+            hovertext=hover_texts,
+            showlegend=False,
+        )
+    )
+
+    # Update layout
+    fig.update_layout(
+        title="Entropy Across Parameter Space",
+        xaxis=dict(title="Birth Probability (p)"),
+        yaxis=dict(title="Death Probability (q)"),
+        height=250,
+        margin=dict(l=50, r=20, t=30, b=50),
+        transition_duration=500,  # Animation
+    )
+
+    return fig
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

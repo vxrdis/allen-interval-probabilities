@@ -1,0 +1,35 @@
+/* Custom styling for the Allen interval simulator */
+
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+h1 {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.card-header {
+    font-weight: bold;
+    background-color: #f8f9fa;
+}
+
+/* Improve slider appearance */
+.rc-slider-track {
+    background-color: #007bff;
+}
+
+.rc-slider-handle {
+    border-color: #007bff;
+}
+
+/* Animated transitions */
+.dash-graph {
+    transition: all 0.5s ease-in-out;
+}
