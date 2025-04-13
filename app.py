@@ -94,6 +94,9 @@ def generate_full_composition_matrix(p_born, p_die, trials, limit_per_cell):
     # Initialize the results matrix
     matrix = {}
 
+    # Track global distribution of R3 outcomes across all compositions
+    global_r3_counts = {}
+
     # For each pair of relations, extract the composition results
     for r1 in ALLEN_RELATIONS:
         matrix[r1] = {}
@@ -111,10 +114,68 @@ def generate_full_composition_matrix(p_born, p_die, trials, limit_per_cell):
                     },
                     "total": total,
                 }
+
+                # Add to global distribution counts
+                for rel, count in composition.items():
+                    global_r3_counts[rel] = global_r3_counts.get(rel, 0) + count
             else:
                 matrix[r1][r2] = {"composition": {}, "total": 0}
 
-    return matrix, len(triples)
+    # Calculate global statistics
+    global_total = sum(global_r3_counts.values())
+    global_distribution = (
+        {rel: count / global_total for rel, count in global_r3_counts.items()}
+        if global_total > 0
+        else {}
+    )
+
+    # Calculate metrics
+    global_entropy = entropy(global_distribution)
+    global_gini = gini(global_distribution)
+    global_coverage = sum(1 for val in global_distribution.values() if val > 0)
+
+    # Calculate JS divergence against theoretical models
+    js_uniform = js_divergence(global_distribution, UNIFORM_DISTRIBUTION)
+    js_fv = js_divergence(global_distribution, FERNANDO_VOGEL_DISTRIBUTION)
+    js_suliman = js_divergence(global_distribution, SULIMAN_DISTRIBUTION)
+
+    # Determine best fit model
+    min_js = min(js_uniform, js_fv, js_suliman)
+    if min_js == js_uniform:
+        best_fit = "Uniform"
+        best_fit_js = js_uniform
+    elif min_js == js_fv:
+        best_fit = "Fernando-Vogel"
+        best_fit_js = js_fv
+    else:
+        best_fit = "Suliman"
+        best_fit_js = js_suliman
+
+    # Mode (most common relation)
+    mode_relation = (
+        max(global_distribution.items(), key=lambda x: x[1])[0]
+        if global_distribution
+        else None
+    )
+
+    global_stats = {
+        "distribution": global_distribution,
+        "raw_counts": global_r3_counts,
+        "entropy": global_entropy,
+        "gini": global_gini,
+        "coverage": global_coverage,
+        "js_uniform": js_uniform,
+        "js_fv": js_fv,
+        "js_suliman": js_suliman,
+        "best_fit": best_fit,
+        "best_fit_js": best_fit_js,
+        "mode": mode_relation,
+        "mode_name": (
+            RELATION_NAMES.get(mode_relation, "Unknown") if mode_relation else "N/A"
+        ),
+    }
+
+    return matrix, len(triples), global_stats
 
 
 # Create the layout with a more compact header and improved styling with proper edge alignment
@@ -1012,31 +1073,40 @@ app.layout = dbc.Container(
                                             dbc.CardBody(
                                                 [
                                                     html.Div(id="composition-summary"),
+                                                    # Styled container with pale green background
                                                     html.Div(
                                                         [
-                                                            html.P(
-                                                                "Total valid relations: ",
-                                                                className="mb-0 mt-2 font-weight-bold",
+                                                            html.Div(
+                                                                [
+                                                                    html.Strong(
+                                                                        "Total valid relations: "
+                                                                    ),
+                                                                    html.Span(
+                                                                        id="comp-valid-count",
+                                                                        children="0",
+                                                                    ),
+                                                                ],
+                                                                className="mb-2 text-left",
                                                             ),
-                                                            html.Span(
-                                                                id="comp-valid-count",
-                                                                children="0",
+                                                            html.Div(
+                                                                [
+                                                                    html.Strong(
+                                                                        "Most common result: "
+                                                                    ),
+                                                                    html.Span(
+                                                                        id="comp-most-common",
+                                                                        children="None",
+                                                                    ),
+                                                                ],
+                                                                className="mb-1 text-left",
                                                             ),
-                                                            html.Br(),
-                                                        ]
-                                                    ),
-                                                    html.Div(
-                                                        [
-                                                            html.P(
-                                                                "Most common result: ",
-                                                                className="mb-0 mt-2 font-weight-bold",
-                                                            ),
-                                                            html.Span(
-                                                                id="comp-most-common",
-                                                                children="None",
-                                                            ),
-                                                            html.Br(),
-                                                        ]
+                                                        ],
+                                                        className="mt-3 p-3 rounded",
+                                                        style={
+                                                            "backgroundColor": "#e8f5e9",  # Pale green
+                                                            "border": "1px solid #c8e6c9",
+                                                            "textAlign": "left",
+                                                        },
                                                     ),
                                                 ],
                                             ),
@@ -1329,30 +1399,9 @@ app.layout = dbc.Container(
                                                         value=100000,
                                                         className="mb-4",
                                                     ),
-                                                    # View options
-                                                    html.Div(
-                                                        [
-                                                            html.H6(
-                                                                "Display Options:",
-                                                                className="mt-3 mb-3",
-                                                            ),
-                                                            dbc.Checklist(
-                                                                options=[
-                                                                    {
-                                                                        "label": "Show deterministic view (symbolic sets)",
-                                                                        "value": "deterministic",
-                                                                    },
-                                                                    {
-                                                                        "label": "Show empirical view (frequency-based)",
-                                                                        "value": "empirical",
-                                                                    },
-                                                                ],
-                                                                value=["empirical"],
-                                                                id="matrix-view-options",
-                                                                inline=False,
-                                                                switch=True,
-                                                            ),
-                                                        ]
+                                                    html.Small(
+                                                        "full=(pmoFDseSdfOMP) and concur=(oFDseSdfO)",
+                                                        className="text-muted d-block mb-3",
                                                     ),
                                                     # Run button
                                                     dbc.Button(
@@ -1460,9 +1509,7 @@ app.layout = dbc.Container(
                                                             ),
                                                             html.P(
                                                                 [
-                                                                    "Hover over cells to see the result distribution. ",
-                                                                    html.Br(),
-                                                                    "Cell color intensity indicates probability.",
+                                                                    "Hover over cells to see detailed composition results."
                                                                 ],
                                                                 className="text-muted small",
                                                             ),
@@ -2956,7 +3003,7 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
     try:
         # Calculate the matrix - this may take some time
         start_time = datetime.now()
-        matrix_data, valid_count = generate_full_composition_matrix(
+        matrix_data, valid_count, global_stats = generate_full_composition_matrix(
             p_born, p_die, trials, limit
         )
         end_time = datetime.now()
@@ -2996,6 +3043,7 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
             },
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "matrix": matrix_data,
+            "global_stats": global_stats,
         }
 
         # Create missing compositions dropdown content - fixing the duplicate numbering issue
@@ -3043,9 +3091,7 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
                             ),
                             html.P(
                                 [
-                                    "Hover over cells to see the result distribution. ",
-                                    html.Br(),
-                                    "Cell color intensity indicates probability.",
+                                    "Hover over cells to see detailed composition results.",
                                 ],
                                 className="text-muted small",
                             ),
@@ -3164,10 +3210,9 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
 @app.callback(
     Output("matrix-heatmap", "figure"),
     Input("matrix-results", "data"),
-    Input("matrix-view-options", "value"),
     prevent_initial_call=True,
 )
-def update_matrix_visualization(data, view_options):
+def update_matrix_visualization(data):
     if not data or not data.get("matrix"):
         # Create an empty figure with a message
         fig = go.Figure()
@@ -3191,179 +3236,208 @@ def update_matrix_visualization(data, view_options):
     matrix = data.get("matrix", {})
     params = data.get("parameters", {})
 
-    # Determine view modes
-    show_deterministic = "deterministic" in view_options
-    show_empirical = "empirical" in view_options
-
-    if not show_deterministic and not show_empirical:
-        show_empirical = True  # Default to empirical if neither is selected
-
-    # Create a 13×13 matrix for visualization
-    # Each cell will contain information about the composition results
-    x = ALLEN_RELATIONS  # Columns (R2)
+    # Create a 13×13 matrix for visualization following Alspaugh's convention
+    x = list(ALLEN_RELATIONS)  # Columns (R2)
     y = list(
         reversed(ALLEN_RELATIONS)
     )  # Rows (R1) - reversed to match traditional order
 
-    # Create custom hover text for each cell
-    hover_texts = []
-    z_values = []  # For color intensity based on distribution
-    custom_data = []  # For storing additional data for each cell
+    # Alspaugh's background colors for cells
+    alspaugh_colors = {
+        "p": "#eef",
+        "P": "#ccf",
+        "d": "#fee",
+        "D": "#fcc",
+        "osd": "#efe",
+        "DSO": "#cfc",
+        "oFD": "#ddf",
+        "dfO": "#bbf",
+        "m": "#fdd",
+        "M": "#fbb",
+        "pmosd": "#dfd",
+        "DSOMP": "#bfb",
+        "pmoFD": "#ffb",
+        "dfOMP": "#ff8",
+        "o": "#fbf",
+        "O": "#f8f",
+        "pmo": "#bff",
+        "OMP": "#8ff",
+        "s": "#edb",
+        "S": "#eb9",
+        "f": "#deb",
+        "F": "#be9",
+        "seS": "#bed",
+        "Fef": "#9eb",
+        "e": "#d9c",
+        "concur": "#bde",
+        "full": "#9be",
+    }
 
-    for r1 in y:  # For each row (R1)
-        hover_row = []
-        z_row = []
-        custom_row = []
+    # Create figure with custom layout
+    fig = go.Figure()
 
-        for r2 in x:  # For each column (R2)
+    # Define special relation sets precisely (exact strings for consistent comparison)
+    full_relations_set = set(ALLEN_RELATIONS)  # All 13 relations: pmoFDseSdfOMP
+    concur_relations_set = set("oFDseSdfO")  # The 9 concurrent relations
+
+    # Create hover text for each cell and determine cell styling
+    annotations = []
+
+    for i, r1 in enumerate(y):  # For each row (R1)
+        for j, r2 in enumerate(x):  # For each column (R2)
             cell_data = matrix.get(r1, {}).get(r2, {"composition": {}, "total": 0})
             composition = cell_data.get("composition", {})
             total = cell_data.get("total", 0)
 
             if total == 0:
-                hover_text = f"R1: {r1} ({RELATION_NAMES.get(r1, 'Unknown')})<br>R2: {r2} ({RELATION_NAMES.get(r2, 'Unknown')})<br>No data available"
-                z_value = 0
-                custom_value = {"deterministic": "", "empirical": {}}
-            else:
-                # Sort relations by percentage for consistent display
-                sorted_rels = sorted(
-                    [(rel, data) for rel, data in composition.items()],
-                    key=lambda x: x[1]["percentage"],
-                    reverse=True,
-                )
+                # No data for this cell
+                continue
 
-                # Create hover text with all relations and percentages
-                hover_parts = [
-                    f"R1: {r1} ({RELATION_NAMES.get(r1, 'Unknown')})<br>R2: {r2} ({RELATION_NAMES.get(r2, 'Unknown')})"
-                ]
+            # Generate hover text with all relations and percentages
+            hover_parts = [
+                f"R1: {r1} ({RELATION_NAMES.get(r1, 'Unknown')})<br>R2: {r2} ({RELATION_NAMES.get(r2, 'Unknown')})"
+            ]
 
-                for rel, data in sorted_rels:
+            # Sort relations by Allen order for consistent display in hover
+            for rel in ALLEN_RELATIONS:
+                if rel in composition:
+                    data = composition[rel]
                     pct = data["percentage"]
                     count = data["count"]
                     hover_parts.append(
                         f"{rel} ({RELATION_NAMES.get(rel, 'Unknown')}): {pct:.1f}% ({count})"
                     )
 
-                hover_text = "<br>".join(hover_parts)
+            hover_text = "<br>".join(hover_parts)
 
-                # Find dominant relation (for empirical view)
+            # Get list of all relations present in the composition (even with very small percentages)
+            # This ensures consistent detection of full and concur patterns
+            present_rels = set(composition.keys())
+
+            cell_text = ""
+            cell_color = "#ffffff"
+            font_style = "normal"
+
+            # Check for special cases consistently - exact set matching
+            # Full relation set - all 13 Allen relations
+            if present_rels == full_relations_set or "".join(
+                sorted(present_rels)
+            ) == "".join(sorted(ALLEN_RELATIONS)):
+                cell_text = "full"
+                cell_color = alspaugh_colors["full"]
+                font_style = "italic"
+            # Concurrent relation set - exact match with the 9 concurrent relations
+            elif present_rels == concur_relations_set or "".join(
+                sorted(present_rels)
+            ) == "".join(sorted("oFDseSdfO")):
+                cell_text = "concur"
+                cell_color = alspaugh_colors["concur"]
+                font_style = "italic"
+            # Also check if we have a parenthetical notation that matches these special cases
+            elif "".join(sorted(present_rels)) == "".join(sorted(ALLEN_RELATIONS)):
+                cell_text = "full"  # Force "full" for any cell with all relations
+                cell_color = alspaugh_colors["full"]
+                font_style = "italic"
+            elif "".join(sorted(present_rels)) == "".join(sorted("oFDseSdfO")):
+                cell_text = "concur"  # Force "concur" for any cell with exactly concurrent relations
+                cell_color = alspaugh_colors["concur"]
+                font_style = "italic"
+            else:
+                # Consider only relations with >1% probability for regular cases
+                significant_rels = set(
+                    rel for rel, data in composition.items() if data["percentage"] > 1
+                )
+
+                # Find dominant relation if one exists (>80%)
+                sorted_rels = sorted(
+                    [(rel, data) for rel, data in composition.items()],
+                    key=lambda x: x[1]["percentage"],
+                    reverse=True,
+                )
+
                 dominant_rel = sorted_rels[0][0] if sorted_rels else ""
                 dominant_pct = sorted_rels[0][1]["percentage"] if sorted_rels else 0
 
-                # Create deterministic view representation
-                if len(sorted_rels) == 1 and dominant_pct > 99:
-                    # Single deterministic result
-                    deterministic_repr = dominant_rel
+                if dominant_pct > 80:
+                    # Single dominant relation
+                    cell_text = dominant_rel
+                    cell_color = alspaugh_colors.get(dominant_rel, "#ffffff")
+                elif len(significant_rels) <= 5:
+                    # Small set of relations - show them all in Allen order
+                    sorted_rels = [
+                        rel for rel in ALLEN_RELATIONS if rel in significant_rels
+                    ]
+                    cell_text = "".join(sorted_rels)
+                    # Try to find matching color in Alspaugh's scheme
+                    cell_color = alspaugh_colors.get(cell_text, "#f5f5f5")
                 else:
-                    # Set of possible relations
-                    possible_rels = [
-                        rel for rel, data in sorted_rels if data["percentage"] > 1
-                    ]  # Threshold for inclusion
-                    deterministic_repr = "(" + "".join(possible_rels) + ")"
+                    # Many relations - use abbreviated notation
+                    sorted_rels = [
+                        rel for rel in ALLEN_RELATIONS if rel in significant_rels
+                    ]
+                    cell_text = "(" + "".join(sorted_rels) + ")"
+                    cell_color = "#f0f0f0"
 
-                # Create empirical data
-                empirical_data = {
-                    "dominant_rel": dominant_rel,
-                    "dominant_pct": dominant_pct,
-                    "entropy": entropy(
-                        {
-                            rel: data["percentage"] / 100
-                            for rel, data in composition.items()
-                        }
-                    ),
-                }
+            # Add cell with proper background
+            fig.add_shape(
+                type="rect",
+                x0=j - 0.5,
+                y0=i - 0.5,
+                x1=j + 0.5,
+                y1=i + 0.5,
+                line=dict(color="#eeeeee", width=0.5),  # Very light gray lines
+                fillcolor=cell_color,
+                layer="below",
+            )
 
-                # Set z-value based on entropy (lower entropy = more deterministic = higher color intensity)
-                z_value = 1.0 - min(
-                    empirical_data["entropy"] / 2.56, 1.0
-                )  # 2.56 = max possible entropy for 13 relations
+            # Add text annotation with black text
+            if cell_text:
+                annotations.append(
+                    dict(
+                        x=j,
+                        y=i,
+                        text=cell_text,
+                        showarrow=False,
+                        font=dict(
+                            color="#000000",  # Black text for all cells
+                            size=12 if len(cell_text) < 10 else 10,
+                            family="sans-serif",
+                            style=font_style,
+                        ),
+                        hovertext=hover_text,
+                        hoverlabel=dict(
+                            bgcolor="white", font_size=12, font_family="Arial"
+                        ),
+                    )
+                )
 
-                custom_value = {
-                    "deterministic": deterministic_repr,
-                    "empirical": empirical_data,
-                }
-
-            hover_row.append(hover_text)
-            z_row.append(z_value)
-            custom_row.append(custom_value)
-
-        hover_texts.append(hover_row)
-        z_values.append(z_row)
-        custom_data.append(custom_row)
-
-    # Create the base heatmap figure
-    fig = go.Figure(
-        data=go.Heatmap(
-            z=z_values,
-            x=x,  # Column labels (R2)
-            y=y,  # Row labels (R1)
-            colorscale="Blues",
-            showscale=False,
-            hoverinfo="text",
-            text=hover_texts,
-            customdata=custom_data,
-        )
+    # Configure axes
+    fig.update_xaxes(
+        tickmode="array",
+        tickvals=list(range(len(x))),
+        ticktext=x,
+        title="R2 (Second Relation)",
+        side="bottom",
+        tickfont=dict(size=12),
     )
 
-    # Add annotations based on view mode
-    annotations = []
+    fig.update_yaxes(
+        tickmode="array",
+        tickvals=list(range(len(y))),
+        ticktext=y,
+        title="R1 (First Relation)",
+        tickfont=dict(size=12),
+    )
 
-    for i, r1 in enumerate(y):
-        for j, r2 in enumerate(x):
-            if z_values[i][j] > 0:  # Only annotate cells with data
-                custom_value = custom_data[i][j]
-
-                if show_deterministic and show_empirical:
-                    # Show both representations
-                    det_text = custom_value["deterministic"]
-                    emp_text = f"{custom_value['empirical']['dominant_rel']}"
-                    text = f"{det_text}<br>{emp_text}"
-                elif show_deterministic:
-                    # Show only deterministic view
-                    text = custom_value["deterministic"]
-                else:  # show_empirical
-                    # Show only empirical view (dominant relation)
-                    text = custom_value["empirical"]["dominant_rel"]
-
-                # Set color based on dominant relation if available
-                dominant_rel = custom_value["empirical"].get("dominant_rel", "")
-                text_color = RELATION_COLORS.get(dominant_rel, "#000000")
-
-                # Set opacity based on dominance percentage
-                opacity = min(
-                    custom_value["empirical"].get("dominant_pct", 0) / 100 + 0.3, 1.0
-                )
-
-                annotations.append(
-                    {
-                        "x": r2,
-                        "y": r1,
-                        "xref": "x",
-                        "yref": "y",
-                        "text": text,
-                        "showarrow": False,
-                        "font": {
-                            "color": text_color,
-                            "size": 12 if len(text) < 10 else 10,
-                        },
-                        "opacity": opacity,
-                    }
-                )
-
-    # Update layout
+    # Add the annotations
     fig.update_layout(
-        title=f"Allen Relation Composition Matrix (p={params.get('p_born', 0):.2f}, q={params.get('p_die', 0):.2f})",
-        xaxis=dict(
-            title="R2 (Second Relation)",
-            side="bottom",
-            tickfont=dict(size=12),
-        ),
-        yaxis=dict(
-            title="R1 (First Relation)",
-            tickfont=dict(size=12),
-        ),
-        height=700,
         annotations=annotations,
+        title=f"Allen Relation Composition Matrix (p={params.get('p_born', 0):.2f}, q={params.get('p_die', 0):.2f})",
+        height=700,
+        plot_bgcolor="white",
+        hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial"),
+        xaxis=dict(range=[-0.5, len(x) - 0.5]),
+        yaxis=dict(range=[-0.5, len(y) - 0.5]),
         transition_duration=500,  # Animation
     )
 
