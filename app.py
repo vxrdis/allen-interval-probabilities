@@ -26,6 +26,7 @@ from constants import (
     RELATION_COLORS,
 )
 from comp_runner import generate_valid_triples, build_composition_table
+from reference_tables import get_reference_tables
 
 # Initialize the Dash app with Bootstrap styling
 app = dash.Dash(
@@ -451,6 +452,61 @@ app.layout = dbc.Container(
                                         ],
                                         className="mt-3",
                                     ),
+                                    dbc.Card(
+                                        [
+                                            dbc.CardBody(
+                                                [
+                                                    html.Label(
+                                                        "Max denominator for fraction display:"
+                                                    ),
+                                                    dbc.Row(
+                                                        [
+                                                            dbc.Col(
+                                                                dcc.Slider(
+                                                                    id="max-denominator-slider",
+                                                                    min=2,
+                                                                    max=100,
+                                                                    step=1,
+                                                                    value=30,
+                                                                    marks={
+                                                                        i: str(i)
+                                                                        for i in range(
+                                                                            10, 101, 10
+                                                                        )
+                                                                    },
+                                                                    tooltip={
+                                                                        "placement": "bottom",
+                                                                        "always_visible": True,
+                                                                    },
+                                                                ),
+                                                                width=9,
+                                                            ),
+                                                            dbc.Col(
+                                                                dbc.Input(
+                                                                    id="max-denominator-input",
+                                                                    type="number",
+                                                                    value=30,
+                                                                    min=1,
+                                                                    max=1000,
+                                                                    step=1,
+                                                                    style={
+                                                                        "height": "38px"
+                                                                    },
+                                                                ),
+                                                                width=3,
+                                                            ),
+                                                        ],
+                                                        className="mb-3 align-items-center",
+                                                    ),
+                                                    html.Small(
+                                                        "Higher values give more precise fractions but may be harder to read",
+                                                        className="text-muted d-block mb-2",
+                                                    ),
+                                                ]
+                                            ),
+                                        ],
+                                        className="mb-3",
+                                    ),
                                 ],
                                 md=4,
                             ),
@@ -773,1250 +829,11 @@ app.layout = dbc.Container(
                     active_label_style={"font-weight": "bold"},
                 ),
                 dbc.Tab(
-                    # Merged Composition tab
+                    # Composition Analysis tab - Now only contains single composition analysis
                     dbc.Row(
                         [
                             dbc.Col(
                                 [
-                                    # Reference tables in collapsible sections
-                                    html.Div(
-                                        [
-                                            html.Details(
-                                                [
-                                                    html.Summary(
-                                                        html.Strong(
-                                                            "Table A: Basic Interval Composition"
-                                                        ),
-                                                        style={
-                                                            "cursor": "pointer",
-                                                            "marginBottom": "10px",
-                                                        },
-                                                    ),
-                                                    html.Div(
-                                                        [
-                                                            html.Table(
-                                                                [
-                                                                    html.Thead(
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "p"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "before"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "m"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "meets"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "o"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "overlaps"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "F"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "finished by"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "D"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "contains"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "s"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "starts"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "e"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "equals"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "S"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "started by"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "d"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "during"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "f"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "finishes"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "O"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "overlapped by"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "M"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "met by"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                                html.Th(
-                                                                                    html.Div(
-                                                                                        [
-                                                                                            html.Strong(
-                                                                                                "P"
-                                                                                            ),
-                                                                                            html.Sub(
-                                                                                                "after"
-                                                                                            ),
-                                                                                        ]
-                                                                                    )
-                                                                                ),
-                                                                            ]
-                                                                        )
-                                                                    ),
-                                                                    html.Tbody(
-                                                                        [
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "p"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "before"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmosd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmosd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmosd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmosd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        html.I(
-                                                                                            "full"
-                                                                                        )
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "m"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "meets"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(m)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(m)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(m)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(osd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(osd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(osd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(Fef)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSOMP)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "o"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "overlaps"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmo)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmo)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmoFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(o)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(o)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(oFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(osd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(osd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        html.I(
-                                                                                            "concur"
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSOMP)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "F"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "finished by"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(m)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(o)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(F)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(o)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(F)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(osd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(Fef)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSOMP)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "D"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "contains"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmoFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(oFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(oFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(oFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        html.I(
-                                                                                            "concur"
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSOMP)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "s"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "starts"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmo)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmo)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmoFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(s)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(s)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(seS)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(M)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "e"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "equals"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(m)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(o)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(F)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(s)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(e)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(S)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(f)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(O)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(M)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "S"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "started by"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmoFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(oFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(oFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(D)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(seS)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(S)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(S)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(O)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(O)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(M)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "d"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "during"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmosd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmosd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        html.I(
-                                                                                            "full"
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfOMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfOMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "f"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "finishes"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(p)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(m)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(osd)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(Fef)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSOMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(f)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(OMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(d)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(f)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(OMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "O"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "overlapped by"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmoFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(oFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        html.I(
-                                                                                            "concur"
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(DSOMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(O)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(OMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(O)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(OMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "M"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "met by"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(pmoFD)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(seS)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(M)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(M)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfO)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(M)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                            html.Tr(
-                                                                                [
-                                                                                    html.Th(
-                                                                                        html.Div(
-                                                                                            [
-                                                                                                html.Strong(
-                                                                                                    "P"
-                                                                                                ),
-                                                                                                html.Sub(
-                                                                                                    "after"
-                                                                                                ),
-                                                                                            ]
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        html.I(
-                                                                                            "full"
-                                                                                        )
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfOMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfOMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfOMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(dfOMP)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                    html.Td(
-                                                                                        "(P)"
-                                                                                    ),
-                                                                                ]
-                                                                            ),
-                                                                        ]
-                                                                    ),
-                                                                ],
-                                                                className="table table-sm table-bordered",
-                                                                style={
-                                                                    "fontSize": "0.75rem"
-                                                                },
-                                                            ),
-                                                            html.Div(
-                                                                html.Sub(
-                                                                    html.I(
-                                                                        "full = (pmoFDseSdfOMP) and concur = (oFDseSdfO)"
-                                                                    )
-                                                                ),
-                                                                className="mt-2",
-                                                            ),
-                                                        ],
-                                                        className="mb-3 overflow-auto",
-                                                        style={"maxHeight": "400px"},
-                                                    ),
-                                                ],
-                                                open=False,
-                                            ),
-                                            html.Details(
-                                                [
-                                                    html.Summary(
-                                                        html.Strong(
-                                                            "Table B: Composition Frequencies"
-                                                        ),
-                                                        style={
-                                                            "cursor": "pointer",
-                                                            "marginBottom": "10px",
-                                                        },
-                                                    ),
-                                                    html.Div(
-                                                        html.Table(
-                                                            [
-                                                                html.Thead(
-                                                                    html.Tr(
-                                                                        [
-                                                                            html.Th(
-                                                                                html.I(
-                                                                                    "Frequency"
-                                                                                )
-                                                                            ),
-                                                                            html.Th(""),
-                                                                            html.Th(""),
-                                                                            html.Th(""),
-                                                                            html.Th(""),
-                                                                            html.Th(""),
-                                                                            html.Th(""),
-                                                                            html.Th(""),
-                                                                            html.Th(""),
-                                                                        ]
-                                                                    )
-                                                                ),
-                                                                html.Tbody(
-                                                                    [
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    "22"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(p)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(P)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    "9"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(d)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(D)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    "7"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(oFD)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(osd)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(DSO)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(dfO)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    "6"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(pmoFD)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(pmosd)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(m)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(DSOMP)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(dfOMP)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(M)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    "5"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(o)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(O)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    "4"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(pmo)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(OMP)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    "3"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    html.I(
-                                                                                        "full"
-                                                                                    )
-                                                                                ),
-                                                                                html.Td(
-                                                                                    html.I(
-                                                                                        "concur"
-                                                                                    )
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(F)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(Fef)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(seS)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(s)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(S)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(f)"
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        html.Tr(
-                                                                            [
-                                                                                html.Th(
-                                                                                    "1"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    "(e)"
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                                html.Td(
-                                                                                    ""
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                    ]
-                                                                ),
-                                                            ],
-                                                            className="table table-sm table-bordered",
-                                                            style={
-                                                                "fontSize": "0.8rem",
-                                                                "width": "auto",
-                                                            },
-                                                        ),
-                                                        className="mb-3",
-                                                    ),
-                                                ],
-                                                open=False,
-                                            ),
-                                        ],
-                                        className="mb-4 composition-reference",
-                                    ),
                                     # Parameters Card
                                     dbc.Card(
                                         [
@@ -2131,113 +948,58 @@ app.layout = dbc.Container(
                                                         type="number",
                                                         min=100,
                                                         step=100,
-                                                        value=1000,
+                                                        value=10000,
                                                         className="mb-4",
                                                     ),
-                                                    # Composition Mode Tabs
-                                                    dbc.Tabs(
+                                                    # Relation selection (now directly here, not in tabs)
+                                                    html.Div(
                                                         [
-                                                            dbc.Tab(
-                                                                [
-                                                                    html.Div(
-                                                                        [
-                                                                            # Relation selection
-                                                                            html.Label(
-                                                                                "Relation 1 (R1):"
-                                                                            ),
-                                                                            dcc.Dropdown(
-                                                                                id="relation1-dropdown",
-                                                                                options=[
-                                                                                    {
-                                                                                        "label": f"{rel} - {RELATION_NAMES[rel]}",
-                                                                                        "value": rel,
-                                                                                    }
-                                                                                    for rel in ALLEN_RELATIONS
-                                                                                ],
-                                                                                value=ALLEN_RELATIONS[
-                                                                                    0
-                                                                                ],
-                                                                                clearable=False,
-                                                                                className="mb-3",
-                                                                            ),
-                                                                            html.Label(
-                                                                                "Relation 2 (R2):"
-                                                                            ),
-                                                                            dcc.Dropdown(
-                                                                                id="relation2-dropdown",
-                                                                                options=[
-                                                                                    {
-                                                                                        "label": f"{rel} - {RELATION_NAMES[rel]}",
-                                                                                        "value": rel,
-                                                                                    }
-                                                                                    for rel in ALLEN_RELATIONS
-                                                                                ],
-                                                                                value=ALLEN_RELATIONS[
-                                                                                    0
-                                                                                ],
-                                                                                clearable=False,
-                                                                                className="mb-4",
-                                                                            ),
-                                                                        ],
-                                                                        className="mt-3",
-                                                                    ),
-                                                                    # Run button
-                                                                    dbc.Button(
-                                                                        "Run Single Composition",
-                                                                        id="run-composition-button",
-                                                                        color="primary",
-                                                                        size="lg",
-                                                                        className="w-100",
-                                                                    ),
-                                                                ],
-                                                                label="Single Composition",
-                                                                tab_id="tab-single-comp",
+                                                            html.Label(
+                                                                "Relation 1 (R1):"
                                                             ),
-                                                            dbc.Tab(
-                                                                [
-                                                                    html.Div(
-                                                                        [
-                                                                            # View options
-                                                                            html.H6(
-                                                                                "Display Options:",
-                                                                                className="mt-3 mb-3",
-                                                                            ),
-                                                                            dbc.Checklist(
-                                                                                options=[
-                                                                                    {
-                                                                                        "label": "Show deterministic view (symbolic sets)",
-                                                                                        "value": "deterministic",
-                                                                                    },
-                                                                                    {
-                                                                                        "label": "Show empirical view (frequency-based)",
-                                                                                        "value": "empirical",
-                                                                                    },
-                                                                                ],
-                                                                                value=[
-                                                                                    "empirical"
-                                                                                ],
-                                                                                id="matrix-view-options",
-                                                                                inline=False,
-                                                                                switch=True,
-                                                                            ),
-                                                                        ]
-                                                                    ),
-                                                                    # Run matrix button
-                                                                    dbc.Button(
-                                                                        "Calculate Full Matrix",
-                                                                        id="run-matrix-button",
-                                                                        color="primary",
-                                                                        size="lg",
-                                                                        className="w-100 mt-4",
-                                                                    ),
+                                                            dcc.Dropdown(
+                                                                id="relation1-dropdown",
+                                                                options=[
+                                                                    {
+                                                                        "label": f"{rel} - {RELATION_NAMES[rel]}",
+                                                                        "value": rel,
+                                                                    }
+                                                                    for rel in ALLEN_RELATIONS
                                                                 ],
-                                                                label="Full Matrix",
-                                                                tab_id="tab-full-matrix",
+                                                                value=ALLEN_RELATIONS[
+                                                                    0
+                                                                ],
+                                                                clearable=False,
+                                                                className="mb-3",
+                                                            ),
+                                                            html.Label(
+                                                                "Relation 2 (R2):"
+                                                            ),
+                                                            dcc.Dropdown(
+                                                                id="relation2-dropdown",
+                                                                options=[
+                                                                    {
+                                                                        "label": f"{rel} - {RELATION_NAMES[rel]}",
+                                                                        "value": rel,
+                                                                    }
+                                                                    for rel in ALLEN_RELATIONS
+                                                                ],
+                                                                value=ALLEN_RELATIONS[
+                                                                    8
+                                                                ],
+                                                                clearable=False,
+                                                                className="mb-4",
                                                             ),
                                                         ],
-                                                        id="composition-mode-tabs",
-                                                        active_tab="tab-single-comp",
                                                         className="mt-3",
+                                                    ),
+                                                    # Run button
+                                                    dbc.Button(
+                                                        "Run Composition",
+                                                        id="run-composition-button",
+                                                        color="primary",
+                                                        size="lg",
+                                                        className="w-100",
                                                     ),
                                                 ],
                                             ),
@@ -2250,30 +1012,95 @@ app.layout = dbc.Container(
                                             dbc.CardBody(
                                                 [
                                                     html.Div(id="composition-summary"),
-                                                    html.P(
-                                                        "Total valid relations: ",
-                                                        className="mb-0 mt-2 font-weight-bold",
-                                                    ),
-                                                    html.Span(
-                                                        id="comp-valid-count",
-                                                        children="0",
-                                                    ),
-                                                    html.P(
-                                                        "Most common result: ",
-                                                        className="mb-0 mt-2 font-weight-bold",
-                                                    ),
-                                                    html.Span(
-                                                        id="comp-most-common",
-                                                        children="None",
+                                                    html.Div(
+                                                        [
+                                                            html.P(
+                                                                "Total valid relations: ",
+                                                                className="mb-0 mt-2 font-weight-bold",
+                                                            ),
+                                                            html.Span(
+                                                                id="comp-valid-count",
+                                                                children="0",
+                                                            ),
+                                                            html.Br(),
+                                                        ]
                                                     ),
                                                     html.Div(
-                                                        id="matrix-status",
-                                                        className="mt-3",
+                                                        [
+                                                            html.P(
+                                                                "Most common result: ",
+                                                                className="mb-0 mt-2 font-weight-bold",
+                                                            ),
+                                                            html.Span(
+                                                                id="comp-most-common",
+                                                                children="None",
+                                                            ),
+                                                            html.Br(),
+                                                        ]
                                                     ),
                                                 ],
                                             ),
                                         ],
                                         className="mt-3",
+                                    ),
+                                    dbc.Card(
+                                        [
+                                            dbc.CardBody(
+                                                [
+                                                    html.Label(
+                                                        "Max denominator for fraction display:"
+                                                    ),
+                                                    dbc.Row(
+                                                        [
+                                                            dbc.Col(
+                                                                dcc.Slider(
+                                                                    id="comp-max-denominator-slider",
+                                                                    min=2,
+                                                                    max=100,
+                                                                    step=1,
+                                                                    value=30,
+                                                                    marks={
+                                                                        i: str(i)
+                                                                        for i in range(
+                                                                            10, 101, 10
+                                                                        )
+                                                                    },
+                                                                    tooltip={
+                                                                        "placement": "bottom",
+                                                                        "always_visible": True,
+                                                                    },
+                                                                ),
+                                                                width=9,
+                                                            ),
+                                                            dbc.Col(
+                                                                dbc.Input(
+                                                                    id="comp-max-denominator-input",
+                                                                    type="number",
+                                                                    value=30,
+                                                                    min=1,
+                                                                    max=1000,
+                                                                    step=1,
+                                                                    style={
+                                                                        "height": "38px"
+                                                                    },
+                                                                ),
+                                                                width=3,
+                                                            ),
+                                                        ],
+                                                        className="mb-3 align-items-center",
+                                                    ),
+                                                    html.Small(
+                                                        "Higher values give more precise fractions but may be harder to read",
+                                                        className="text-muted d-block mb-2",
+                                                    ),
+                                                    html.Small(
+                                                        "full = (pmoFDseSdfOMP) and concur = (oFDseSdfO) in order to conserve space",
+                                                        className="text-muted d-block mb-2",
+                                                    ),
+                                                ]
+                                            ),
+                                        ],
+                                        className="mt-3 mb-3",
                                     ),
                                 ],
                                 md=4,
@@ -2283,134 +1110,86 @@ app.layout = dbc.Container(
                                 [
                                     dbc.Spinner(
                                         children=[
-                                            # Content will be controlled dynamically based on composition mode
-                                            html.Div(
-                                                # Single composition view
-                                                dbc.Card(
-                                                    [
-                                                        dbc.CardHeader(
-                                                            id="composition-title",
-                                                            children="Select Relations and Run Composition",
-                                                        ),
-                                                        dbc.CardBody(
-                                                            [
-                                                                # Results chart
-                                                                dcc.Graph(
-                                                                    id="composition-chart"
-                                                                ),
-                                                                # Results table
-                                                                html.Div(
-                                                                    id="composition-table-container",
-                                                                    className="mt-4",
-                                                                    children=[
-                                                                        html.H5(
-                                                                            "Composition Results"
-                                                                        ),
-                                                                        dash_table.DataTable(
-                                                                            id="composition-table",
-                                                                            columns=[
-                                                                                {
-                                                                                    "name": "Relation",
-                                                                                    "id": "relation",
-                                                                                },
-                                                                                {
-                                                                                    "name": "Name",
-                                                                                    "id": "name",
-                                                                                },
-                                                                                {
-                                                                                    "name": "Count",
-                                                                                    "id": "count",
-                                                                                },
-                                                                                {
-                                                                                    "name": "Percentage",
-                                                                                    "id": "percentage",
-                                                                                },
-                                                                                {
-                                                                                    "name": "≈ Fraction",
-                                                                                    "id": "fraction",
-                                                                                },
-                                                                            ],
-                                                                            style_table={
-                                                                                "overflowX": "auto"
-                                                                            },
-                                                                            style_cell={
-                                                                                "textAlign": "left",
-                                                                                "padding": "8px",
-                                                                            },
-                                                                            style_header={
-                                                                                "backgroundColor": "#f8f9fa",
-                                                                                "fontWeight": "bold",
-                                                                            },
-                                                                            style_data_conditional=[
-                                                                                {
-                                                                                    "if": {
-                                                                                        "state": "selected"
-                                                                                    },
-                                                                                    "backgroundColor": "#e6f2ff",
-                                                                                    "border": "1px solid #ccc",
-                                                                                }
-                                                                            ],
-                                                                        ),
-                                                                    ],
-                                                                ),
-                                                            ]
-                                                        ),
-                                                    ]
-                                                ),
-                                                id="single-composition-container",
-                                            ),
-                                            html.Div(
-                                                # Matrix view
-                                                dbc.Card(
-                                                    [
-                                                        dbc.CardHeader(
-                                                            html.H5(
-                                                                "Allen Relation Composition Matrix",
-                                                                className="mb-0",
-                                                                id="matrix-title",
-                                                            )
-                                                        ),
-                                                        dbc.CardBody(
-                                                            [
-                                                                html.P(
-                                                                    "The matrix shows the composition of Allen relations R1 (rows) with R2 (columns).",
-                                                                    className="text-muted",
-                                                                ),
-                                                                html.P(
-                                                                    [
-                                                                        "Hover over cells to see the result distribution. ",
-                                                                        html.Br(),
-                                                                        "Cell color intensity indicates probability.",
-                                                                    ],
-                                                                    className="text-muted small",
-                                                                ),
-                                                                html.Div(
-                                                                    dcc.Loading(
-                                                                        id="loading-matrix",
-                                                                        type="default",
-                                                                        children=dcc.Graph(
-                                                                            id="matrix-heatmap",
-                                                                            config={
-                                                                                "responsive": True
-                                                                            },
-                                                                            style={
-                                                                                "height": "700px"
-                                                                            },
-                                                                        ),
+                                            # Single composition view
+                                            dbc.Card(
+                                                [
+                                                    dbc.CardHeader(
+                                                        id="composition-title",
+                                                        children="Select Relations and Run Composition",
+                                                    ),
+                                                    dbc.CardBody(
+                                                        [
+                                                            # Results chart
+                                                            dcc.Graph(
+                                                                id="composition-chart"
+                                                            ),
+                                                            # Results table
+                                                            html.Div(
+                                                                id="composition-table-container",
+                                                                className="mt-4",
+                                                                children=[
+                                                                    html.H5(
+                                                                        "Composition Results"
                                                                     ),
-                                                                ),
-                                                                html.Div(
-                                                                    id="cell-details",
-                                                                    className="mt-3",
-                                                                ),
-                                                            ]
-                                                        ),
-                                                    ]
-                                                ),
-                                                id="matrix-composition-container",
-                                                style={
-                                                    "display": "none"
-                                                },  # Initially hidden
+                                                                    dash_table.DataTable(
+                                                                        id="composition-table",
+                                                                        columns=[
+                                                                            {
+                                                                                "name": "Relation",
+                                                                                "id": "relation",
+                                                                            },
+                                                                            {
+                                                                                "name": "Name",
+                                                                                "id": "name",
+                                                                            },
+                                                                            {
+                                                                                "name": "Count",
+                                                                                "id": "count",
+                                                                            },
+                                                                            {
+                                                                                "name": "Percentage",
+                                                                                "id": "percentage",
+                                                                            },
+                                                                            {
+                                                                                "name": "≈ Fraction",
+                                                                                "id": "fraction",
+                                                                            },
+                                                                        ],
+                                                                        style_table={
+                                                                            "overflowX": "auto"
+                                                                        },
+                                                                        style_cell={
+                                                                            "textAlign": "left",
+                                                                            "padding": "8px",
+                                                                        },
+                                                                        style_header={
+                                                                            "backgroundColor": "#f8f9fa",
+                                                                            "fontWeight": "bold",
+                                                                        },
+                                                                        style_data_conditional=[
+                                                                            {
+                                                                                "if": {
+                                                                                    "state": "selected"
+                                                                                },
+                                                                                "backgroundColor": "#e6f2ff",
+                                                                                "border": "1px solid #ccc",
+                                                                            }
+                                                                        ],
+                                                                    ),
+                                                                ],
+                                                            ),
+                                                        ]
+                                                    ),
+                                                ]
+                                            ),
+                                            # Add reference tables to right panel, below the composition results
+                                            html.Div(
+                                                [
+                                                    html.Hr(className="mt-4"),
+                                                    get_reference_tables(),
+                                                ],
+                                                className="mt-4",
+                                                style={"width": "100%"},
                                             ),
                                         ],
                                         id="composition-spinner",
@@ -2423,8 +1202,315 @@ app.layout = dbc.Container(
                             ),
                         ]
                     ),
-                    label="Composition Analysis",  # Renamed and merged tab
+                    label="Composition Analysis",
                     tab_id="tab-composition",
+                    active_label_style={"font-weight": "bold"},
+                ),
+                # NEW TAB FOR MATRIX ANALYSIS
+                dbc.Tab(
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                [
+                                    # Matrix Parameters Card
+                                    dbc.Card(
+                                        [
+                                            dbc.CardHeader("Matrix Parameters"),
+                                            dbc.CardBody(
+                                                [
+                                                    # Birth probability with slider and precise input field
+                                                    html.Label(
+                                                        "Birth Probability (pBorn):"
+                                                    ),
+                                                    dbc.Row(
+                                                        [
+                                                            dbc.Col(
+                                                                dcc.Slider(
+                                                                    id="matrix-p-born-slider",
+                                                                    min=0.0,
+                                                                    max=1.0,
+                                                                    step=0.05,
+                                                                    value=0.1,
+                                                                    marks={
+                                                                        i
+                                                                        / 10: f"{i/10:.1f}"
+                                                                        for i in range(
+                                                                            11
+                                                                        )
+                                                                    },
+                                                                    tooltip={
+                                                                        "placement": "bottom",
+                                                                        "always_visible": True,
+                                                                    },
+                                                                ),
+                                                                width=9,
+                                                            ),
+                                                            dbc.Col(
+                                                                dbc.Input(
+                                                                    id="matrix-p-born-input",
+                                                                    type="number",
+                                                                    value=0.1,
+                                                                    min=0.001,
+                                                                    max=1.0,
+                                                                    step=0.001,
+                                                                    style={
+                                                                        "height": "38px"
+                                                                    },
+                                                                ),
+                                                                width=3,
+                                                            ),
+                                                        ],
+                                                        className="mb-3 align-items-center",
+                                                    ),
+                                                    # Death probability with slider and precise input field
+                                                    html.Label(
+                                                        "Death Probability (pDie):"
+                                                    ),
+                                                    dbc.Row(
+                                                        [
+                                                            dbc.Col(
+                                                                dcc.Slider(
+                                                                    id="matrix-p-die-slider",
+                                                                    min=0.0,
+                                                                    max=1.0,
+                                                                    step=0.05,
+                                                                    value=0.1,
+                                                                    marks={
+                                                                        i
+                                                                        / 10: f"{i/10:.1f}"
+                                                                        for i in range(
+                                                                            11
+                                                                        )
+                                                                    },
+                                                                    tooltip={
+                                                                        "placement": "bottom",
+                                                                        "always_visible": True,
+                                                                    },
+                                                                ),
+                                                                width=9,
+                                                            ),
+                                                            dbc.Col(
+                                                                dbc.Input(
+                                                                    id="matrix-p-die-input",
+                                                                    type="number",
+                                                                    value=0.1,
+                                                                    min=0.001,
+                                                                    max=1.0,
+                                                                    step=0.001,
+                                                                    style={
+                                                                        "height": "38px"
+                                                                    },
+                                                                ),
+                                                                width=3,
+                                                            ),
+                                                        ],
+                                                        className="mb-3 align-items-center",
+                                                    ),
+                                                    # Small helper text for precise value input
+                                                    html.Small(
+                                                        "Use input fields for precise values (e.g. 0.001)",
+                                                        className="text-muted d-block mb-3",
+                                                    ),
+                                                    html.Label("Number of Trials:"),
+                                                    dbc.Input(
+                                                        id="matrix-trials-input",
+                                                        type="number",
+                                                        min=1000,
+                                                        step=1000,
+                                                        value=100000,
+                                                        className="mb-3",
+                                                    ),
+                                                    html.Label("Results Limit:"),
+                                                    dbc.Input(
+                                                        id="matrix-limit-input",
+                                                        type="number",
+                                                        min=100,
+                                                        step=100,
+                                                        value=100000,
+                                                        className="mb-4",
+                                                    ),
+                                                    # View options
+                                                    html.Div(
+                                                        [
+                                                            html.H6(
+                                                                "Display Options:",
+                                                                className="mt-3 mb-3",
+                                                            ),
+                                                            dbc.Checklist(
+                                                                options=[
+                                                                    {
+                                                                        "label": "Show deterministic view (symbolic sets)",
+                                                                        "value": "deterministic",
+                                                                    },
+                                                                    {
+                                                                        "label": "Show empirical view (frequency-based)",
+                                                                        "value": "empirical",
+                                                                    },
+                                                                ],
+                                                                value=["empirical"],
+                                                                id="matrix-view-options",
+                                                                inline=False,
+                                                                switch=True,
+                                                            ),
+                                                        ]
+                                                    ),
+                                                    # Run button
+                                                    dbc.Button(
+                                                        "Calculate Full Matrix",
+                                                        id="run-matrix-button",
+                                                        color="primary",
+                                                        size="lg",
+                                                        className="w-100 mt-4",
+                                                    ),
+                                                ],
+                                            ),
+                                        ]
+                                    ),
+                                    # Matrix Results Status Card
+                                    dbc.Card(
+                                        [
+                                            dbc.CardHeader("Matrix Status"),
+                                            dbc.CardBody(
+                                                html.Div(
+                                                    id="matrix-status", className="mt-0"
+                                                )
+                                            ),
+                                        ],
+                                        className="mt-3",
+                                    ),
+                                    # Fraction denominator control
+                                    dbc.Card(
+                                        [
+                                            dbc.CardBody(
+                                                [
+                                                    html.Label(
+                                                        "Max denominator for fraction display:"
+                                                    ),
+                                                    dbc.Row(
+                                                        [
+                                                            dbc.Col(
+                                                                dcc.Slider(
+                                                                    id="matrix-max-denominator-slider",
+                                                                    min=2,
+                                                                    max=100,
+                                                                    step=1,
+                                                                    value=30,
+                                                                    marks={
+                                                                        i: str(i)
+                                                                        for i in range(
+                                                                            10, 101, 10
+                                                                        )
+                                                                    },
+                                                                    tooltip={
+                                                                        "placement": "bottom",
+                                                                        "always_visible": True,
+                                                                    },
+                                                                ),
+                                                                width=9,
+                                                            ),
+                                                            dbc.Col(
+                                                                dbc.Input(
+                                                                    id="matrix-max-denominator-input",
+                                                                    type="number",
+                                                                    value=30,
+                                                                    min=1,
+                                                                    max=1000,
+                                                                    step=1,
+                                                                    style={
+                                                                        "height": "38px"
+                                                                    },
+                                                                ),
+                                                                width=3,
+                                                            ),
+                                                        ],
+                                                        className="mb-3 align-items-center",
+                                                    ),
+                                                    html.Small(
+                                                        "Higher values give more precise fractions but may be harder to read",
+                                                        className="text-muted d-block mb-2",
+                                                    ),
+                                                ]
+                                            ),
+                                        ],
+                                        className="mt-3 mb-3",
+                                    ),
+                                ],
+                                md=4,
+                                id="matrix-left-panel",
+                            ),
+                            dbc.Col(
+                                [
+                                    dbc.Spinner(
+                                        children=[
+                                            # Matrix view card
+                                            dbc.Card(
+                                                [
+                                                    dbc.CardHeader(
+                                                        html.H5(
+                                                            "Allen Relation Composition Matrix",
+                                                            className="mb-0",
+                                                            id="matrix-title",
+                                                        )
+                                                    ),
+                                                    dbc.CardBody(
+                                                        [
+                                                            html.P(
+                                                                "The matrix shows the composition of Allen relations R1 (rows) with R2 (columns).",
+                                                                className="text-muted",
+                                                            ),
+                                                            html.P(
+                                                                [
+                                                                    "Hover over cells to see the result distribution. ",
+                                                                    html.Br(),
+                                                                    "Cell color intensity indicates probability.",
+                                                                ],
+                                                                className="text-muted small",
+                                                            ),
+                                                            html.Div(
+                                                                dcc.Loading(
+                                                                    id="loading-matrix",
+                                                                    type="default",
+                                                                    children=dcc.Graph(
+                                                                        id="matrix-heatmap",
+                                                                        config={
+                                                                            "responsive": True
+                                                                        },
+                                                                        style={
+                                                                            "height": "700px"
+                                                                        },
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            html.Div(
+                                                                id="cell-details",
+                                                                className="mt-3",
+                                                            ),
+                                                        ]
+                                                    ),
+                                                ]
+                                            ),
+                                            # Add reference tables to right panel, below the matrix
+                                            html.Div(
+                                                [
+                                                    html.Hr(className="mt-4"),
+                                                    get_reference_tables(),
+                                                ],
+                                                className="mt-4",
+                                                style={"width": "100%"},
+                                            ),
+                                        ],
+                                        id="matrix-spinner",
+                                        type="border",
+                                        fullscreen=False,
+                                        color="primary",
+                                    )
+                                ],
+                                md=8,
+                            ),
+                        ]
+                    ),
+                    label="Matrix Analysis",  # New third tab
+                    tab_id="tab-matrix",
                     active_label_style={"font-weight": "bold"},
                 ),
             ],
@@ -2465,6 +1551,11 @@ app.layout = dbc.Container(
         dcc.Store(id="composition-results"),
         # Add store for the matrix results
         dcc.Store(id="matrix-results"),
+        # Add store for fraction denominator
+        dcc.Store(id="fraction-denominator", data=30),
+        dcc.Store(id="comp-fraction-denominator", data=30),
+        # Add store for matrix fraction denominator (separate from comp)
+        dcc.Store(id="matrix-fraction-denominator", data=30),
     ],
     fluid=True,
     className="p-4",
@@ -2575,6 +1666,63 @@ def sync_matrix_die_inputs(slider_value, input_value):
 
 
 @app.callback(
+    Output("max-denominator-slider", "value"),
+    Output("max-denominator-input", "value"),
+    Output("fraction-denominator", "data"),
+    Input("max-denominator-slider", "value"),
+    Input("max-denominator-input", "value"),
+    State("fraction-denominator", "data"),
+    prevent_initial_call=True,
+)
+def sync_max_denominator_inputs(slider_value, input_value, stored_value):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if trigger_id == "max-denominator-slider":
+        return dash.no_update, slider_value, slider_value
+    else:
+        return input_value, dash.no_update, input_value
+
+
+@app.callback(
+    Output("comp-max-denominator-slider", "value"),
+    Output("comp-max-denominator-input", "value"),
+    Output("comp-fraction-denominator", "data"),
+    Input("comp-max-denominator-slider", "value"),
+    Input("comp-max-denominator-input", "value"),
+    State("comp-fraction-denominator", "data"),
+    prevent_initial_call=True,
+)
+def sync_comp_max_denominator_inputs(slider_value, input_value, stored_value):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if trigger_id == "comp-max-denominator-slider":
+        return dash.no_update, slider_value, slider_value
+    else:
+        return input_value, dash.no_update, input_value
+
+
+@app.callback(
+    Output("matrix-max-denominator-slider", "value"),
+    Output("matrix-max-denominator-input", "value"),
+    Output("matrix-fraction-denominator", "data"),
+    Input("matrix-max-denominator-slider", "value"),
+    Input("matrix-max-denominator-input", "value"),
+    State("matrix-fraction-denominator", "data"),
+    prevent_initial_call=True,
+)
+def sync_matrix_max_denominator_inputs(slider_value, input_value, stored_value):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if trigger_id == "matrix-max-denominator-slider":
+        return dash.no_update, slider_value, slider_value
+    else:
+        return input_value, dash.no_update, input_value
+
+
+@app.callback(
     Output("simulation-results", "data"),
     Output("loading-spinner", "children", allow_duplicate=True),
     Output("last-run-time", "children"),
@@ -2654,11 +1802,14 @@ def run_simulation(n_clicks, p_born, p_die, trials):
     Input("simulation-results", "data"),
     Input("model-checklist", "value"),
     Input("sort-checkbox", "value"),  # Add sort checkbox input
+    Input("fraction-denominator", "data"),  # Add this input
     State("metrics-history", "data"),
     State("heatmap-data", "data"),  # Add this state
     prevent_initial_call=True,
 )
-def update_results(results, selected_models, sort_by, metrics_history, heatmap_data):
+def update_results(
+    results, selected_models, sort_by, max_denominator, metrics_history, heatmap_data
+):
     if not results:
         empty_fig = go.Figure()
         empty_fig.update_layout(
@@ -2904,7 +2055,11 @@ def update_results(results, selected_models, sort_by, metrics_history, heatmap_d
 
     for rel in allen_relations_list:
         probability = distribution.get(rel, 0)
-        fraction = percentage_to_fraction(probability * 100) if probability > 0 else "-"
+        fraction = (
+            percentage_to_fraction(probability * 100, max_denominator)
+            if probability > 0
+            else "-"
+        )
 
         table_data.append(
             {
@@ -3462,6 +2617,28 @@ def run_composition(n_clicks, rel1, rel2, p_born, p_die, trials, limit):
     if n_clicks is None:
         return {}, dash.no_update
 
+    # Validate inputs
+    if (
+        rel1 is None
+        or rel2 is None
+        or p_born is None
+        or p_die is None
+        or trials is None
+        or limit is None
+    ):
+        error_card = dbc.Card(
+            [
+                dbc.CardHeader("Error"),
+                dbc.CardBody(
+                    [
+                        html.H5("Invalid Input:"),
+                        html.P("Please provide valid values for all parameters."),
+                    ]
+                ),
+            ]
+        )
+        return {}, error_card
+
     # Generate valid triples with the given parameters
     try:
         triples = generate_valid_triples(p_born, p_die, trials, limit)
@@ -3524,9 +2701,10 @@ def run_composition(n_clicks, rel1, rel2, p_born, p_die, trials, limit):
     Output("comp-most-common", "children"),
     Output("composition-summary", "children"),
     Input("composition-results", "data"),
+    Input("comp-fraction-denominator", "data"),  # Add this input
     prevent_initial_call=True,
 )
-def update_composition_ui(results):
+def update_composition_ui(results, max_denominator):
     if not results:
         # Return default values when no results are available
         empty_fig = go.Figure()
@@ -3576,7 +2754,7 @@ def update_composition_ui(results):
     relation_names = [RELATION_NAMES.get(rel, rel) for rel in relation_codes]
     percentages = [data["percentage"] for _, data in sorted_relations]
     counts = [data["count"] for _, data in sorted_relations]
-    fractions = [percentage_to_fraction(pct) for pct in percentages]
+    fractions = [percentage_to_fraction(pct, max_denominator) for pct in percentages]
 
     # Only show fractions in table if there are multiple outcomes
     show_fractions = len(sorted_relations) > 1
@@ -3767,11 +2945,38 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
     if n_clicks is None:
         return {}, dash.no_update, dash.no_update
 
+    # Add validation for input values
+    if p_born is None or p_die is None or trials is None or limit is None:
+        error_status = dbc.Alert(
+            "Error: Please provide valid values for all parameters.",
+            color="danger",
+        )
+        return {}, dash.no_update, error_status
+
     try:
         # Calculate the matrix - this may take some time
+        start_time = datetime.now()
         matrix_data, valid_count = generate_full_composition_matrix(
             p_born, p_die, trials, limit
         )
+        end_time = datetime.now()
+        calculation_duration = end_time - start_time
+
+        # Count coverage - how many cells have data vs total possible combinations
+        total_cells = len(ALLEN_RELATIONS) * len(ALLEN_RELATIONS)
+        populated_cells = 0
+
+        # Track missing compositions for detailed reporting
+        missing_compositions = []
+
+        for r1 in ALLEN_RELATIONS:
+            for r2 in ALLEN_RELATIONS:
+                composition = matrix_data.get(r1, {}).get(r2, {}).get("composition", {})
+                if composition:
+                    populated_cells += 1
+                else:
+                    # This is a missing composition - track it
+                    missing_compositions.append((r1, r2))
 
         # Create a result object with metadata
         result = {
@@ -3781,64 +2986,142 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
                 "trials": trials,
                 "limit_per_cell": limit,
                 "valid_count": valid_count,
+                "coverage": f"{populated_cells} / {total_cells}",
+                "missing_count": len(missing_compositions),
+                "missing_compositions": missing_compositions,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "duration": str(calculation_duration).split(".")[
+                    0
+                ],  # Format as HH:MM:SS
             },
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "matrix": matrix_data,
         }
 
+        # Create missing compositions dropdown content - fixing the duplicate numbering issue
+        missing_details = None
+        if missing_compositions:
+            missing_list_items = []
+            for r1, r2 in missing_compositions:  # Removed the index counter
+                item_text = f"{r1} ∘ {r2}"  # Removed manual numbering
+                missing_list_items.append(html.Li(item_text))
+
+            missing_details = html.Details(
+                [
+                    html.Summary(
+                        f"⚠ Missing compositions: {len(missing_compositions)}"
+                    ),
+                    html.Ol(
+                        missing_list_items
+                    ),  # html.Ol handles numbering automatically
+                ],
+                className="mt-2 mb-2",
+            )
+
         # Create a card to display the matrix
-        matrix_card = dbc.Card(
-            [
-                dbc.CardHeader(
-                    html.H5(
+        matrix_card = [
+            dbc.Card(
+                [
+                    dbc.CardHeader(
+                        html.H5(
+                            [
+                                "Allen Relation Composition Matrix ",
+                                html.Small(
+                                    f"(p={p_born}, q={p_die}, n={trials})",
+                                    className="text-muted",
+                                ),
+                            ],
+                            className="mb-0",
+                            id="matrix-title",
+                        )
+                    ),
+                    dbc.CardBody(
                         [
-                            "Allen Relation Composition Matrix ",
-                            html.Small(
-                                f"(p={p_born}, q={p_die}, n={trials})",
+                            html.P(
+                                "The matrix shows the composition of Allen relations R1 (rows) with R2 (columns).",
                                 className="text-muted",
                             ),
-                        ],
-                        className="mb-0",
-                        id="matrix-title",
-                    )
-                ),
-                dbc.CardBody(
-                    [
-                        html.P(
-                            "The matrix shows the composition of Allen relations R1 (rows) with R2 (columns).",
-                            className="text-muted",
-                        ),
-                        html.P(
-                            [
-                                "Hover over cells to see the result distribution. ",
-                                html.Br(),
-                                "Cell color intensity indicates probability.",
-                            ],
-                            className="text-muted small",
-                        ),
-                        html.Div(
-                            dcc.Loading(
-                                id="loading-matrix",
-                                type="default",
-                                children=dcc.Graph(
-                                    id="matrix-heatmap",
-                                    config={"responsive": True},
-                                    style={"height": "700px"},
+                            html.P(
+                                [
+                                    "Hover over cells to see the result distribution. ",
+                                    html.Br(),
+                                    "Cell color intensity indicates probability.",
+                                ],
+                                className="text-muted small",
+                            ),
+                            html.Div(
+                                dcc.Loading(
+                                    id="loading-matrix",
+                                    type="default",
+                                    children=dcc.Graph(
+                                        id="matrix-heatmap",
+                                        config={"responsive": True},
+                                        style={"height": "700px"},
+                                    ),
                                 ),
                             ),
-                        ),
-                        html.Div(id="cell-details", className="mt-3"),
-                    ]
-                ),
-            ],
-        )
+                            html.Div(id="cell-details", className="mt-3"),
+                        ]
+                    ),
+                ]
+            ),
+            # Add reference tables after the matrix
+            html.Div(
+                [
+                    html.Hr(className="mt-4"),
+                    get_reference_tables(),
+                ],
+                className="mt-4",
+                style={"width": "100%"},
+            ),
+        ]
 
+        # Create enhanced status alert with summary information
         status = dbc.Alert(
             [
                 html.H6("Matrix calculated successfully", className="alert-heading"),
-                html.P(f"Valid intervals: {valid_count}"),
-                html.P(f"Parameters: p={p_born}, q={p_die}"),
-                html.P(f"Timestamp: {result['timestamp']}"),
+                html.Div(
+                    [
+                        html.P(
+                            [
+                                html.Strong("Generated: "),
+                                f"{result['parameters']['timestamp']}",
+                            ],
+                            className="mb-1",
+                        ),
+                        html.P(
+                            [
+                                html.Strong("Duration: "),
+                                f"{result['parameters']['duration']}",
+                            ],
+                            className="mb-1",
+                        ),
+                        html.P(
+                            [html.Strong("Trials: "), f"{trials:,}"], className="mb-1"
+                        ),
+                        html.P(
+                            [html.Strong("Valid Runs: "), f"{valid_count:,}"],
+                            className="mb-1",
+                        ),
+                        html.P(
+                            [
+                                html.Strong("Coverage: "),
+                                f"{populated_cells} / {total_cells}",
+                            ],
+                            className="mb-1",
+                        ),
+                        html.P(
+                            [html.Strong("Birth Probability (p): "), f"{p_born}"],
+                            className="mb-1",
+                        ),
+                        html.P(
+                            [html.Strong("Death Probability (q): "), f"{p_die}"],
+                            className="mb-1",
+                        ),
+                    ]
+                ),
+                # Add the missing compositions details element
+                missing_details if missing_compositions else "",
             ],
             color="success",
             className="mt-3",
@@ -3847,18 +3130,28 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
         return result, matrix_card, status
 
     except Exception as e:
-        # Handle errors
-        error_card = dbc.Card(
-            [
-                dbc.CardHeader("Error"),
-                dbc.CardBody(
-                    [
-                        html.H5("An error occurred during calculation:"),
-                        html.Pre(str(e), style={"color": "red"}),
-                    ]
-                ),
-            ]
-        )
+        error_card = [
+            dbc.Card(
+                [
+                    dbc.CardHeader("Error"),
+                    dbc.CardBody(
+                        [
+                            html.H5("An error occurred during calculation:"),
+                            html.Pre(str(e), style={"color": "red"}),
+                        ]
+                    ),
+                ]
+            ),
+            # Still keep reference tables visible on error
+            html.Div(
+                [
+                    html.Hr(className="mt-4"),
+                    get_reference_tables(),
+                ],
+                className="mt-4",
+                style={"width": "100%"},
+            ),
+        ]
 
         error_status = dbc.Alert(
             f"Error: {str(e)}",
@@ -4080,10 +3373,11 @@ def update_matrix_visualization(data, view_options):
 @app.callback(
     Output("cell-details", "children"),
     Input("matrix-heatmap", "clickData"),
+    Input("matrix-fraction-denominator", "data"),
     State("matrix-results", "data"),
     prevent_initial_call=True,
 )
-def display_cell_details(click_data, matrix_results):
+def display_cell_details(click_data, max_denominator, matrix_results):
     if not click_data or not matrix_results:
         return ""
 
@@ -4153,7 +3447,7 @@ def display_cell_details(click_data, matrix_results):
     for rel, data in sorted_rels:
         pct = data["percentage"]
         count = data["count"]
-        fraction = percentage_to_fraction(pct)
+        fraction = percentage_to_fraction(pct, max_denominator)
 
         table_data.append(
             {
@@ -4205,15 +3499,30 @@ def display_cell_details(click_data, matrix_results):
 
 
 @app.callback(
-    Output("single-composition-container", "style"),
-    Output("matrix-composition-container", "style"),
+    Output("single-composition-container", "style", allow_duplicate=True),
+    Output("matrix-composition-container", "style", allow_duplicate=True),
+    Output("valid-relations-container", "style"),
+    Output("most-common-container", "style"),
     Input("composition-mode-tabs", "active_tab"),
+    prevent_initial_call=True,
 )
 def toggle_composition_view(active_tab):
     if active_tab == "tab-single-comp":
-        return {"display": "block"}, {"display": "none"}
+        # Show single composition, hide matrix, show stats
+        return (
+            {"display": "block"},
+            {"display": "none"},
+            {"display": "block"},
+            {"display": "block"},
+        )
     else:  # tab-full-matrix
-        return {"display": "none"}, {"display": "block"}
+        # Hide single composition, show matrix, hide stats
+        return (
+            {"display": "none"},
+            {"display": "block"},
+            {"display": "none"},
+            {"display": "none"},
+        )
 
 
 app.index_string = """
@@ -4245,6 +3554,46 @@ app.index_string = """
                 overflow-x: auto;
                 width: 100%;
             }
+
+            /* Add Alspaugh's table styles here */
+            table.composition td, table.composition th {
+              padding-left: .12em;  padding-right: .12em;
+              font-size: .90em;
+            }
+            td        {  text-align: center;  }
+            td.full   {  font-style: italic;  }
+            td.concur {  font-style: italic;  }
+
+            td.p      {  font-family: sans-serif;  background-color:  #eef;  }
+            td.P      {  font-family: sans-serif;  background-color:  #ccf;  }
+            td.d      {  font-family: sans-serif;  background-color:  #fee;  }
+            td.D      {  font-family: sans-serif;  background-color:  #fcc;  }
+            td.osd    {  font-family: sans-serif;  background-color:  #efe;  }
+            td.DSO    {  font-family: sans-serif;  background-color:  #cfc;  }
+
+            td.oFD    {  font-family: sans-serif;  background-color:  #ddf;  }
+            td.dfO    {  font-family: sans-serif;  background-color:  #bbf;  }
+            td.m      {  font-family: sans-serif;  background-color:  #fdd;  }
+            td.M      {  font-family: sans-serif;  background-color:  #fbb;  }
+            td.pmosd  {  font-family: sans-serif;  background-color:  #dfd;  }
+            td.DSOMP  {  font-family: sans-serif;  background-color:  #bfb;  }
+
+            td.pmoFD  {  font-family: sans-serif;  background-color:  #ffb;  }
+            td.dfOMP  {  font-family: sans-serif;  background-color:  #ff8;  }
+            td.o      {  font-family: sans-serif;  background-color:  #fbf;  }
+            td.O      {  font-family: sans-serif;  background-color:  #f8f;  }
+            td.pmo    {  font-family: sans-serif;  background-color:  #bff;  }
+            td.OMP    {  font-family: sans-serif;  background-color:  #8ff;  }
+
+            td.s      {  font-family: sans-serif;  background-color:  #edb;  }
+            td.S      {  font-family: sans-serif;  background-color:  #eb9;  }
+            td.f      {  font-family: sans-serif;  background-color:  #deb;  }
+            td.F      {  font-family: sans-serif;  background-color:  #be9;  }
+            td.seS    {  font-family: sans-serif;  background-color:  #bed;  }
+            td.Fef    {  font-family: sans-serif;  background-color:  #9eb;  }
+            td.e      {  font-family: sans-serif;  background-color:  #d9c;  }
+            td.concur {  background-color:  #bde;  }
+            td.full   {  background-color:  #9be;  }
         </style>
     </head>
     <body>
@@ -4257,9 +3606,6 @@ app.index_string = """
     </body>
 </html>
 """
-
-# Export the underlying Flask server for Gunicorn to use
-server = app.server
 
 if __name__ == "__main__":
     app.run(debug=True)
