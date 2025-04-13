@@ -566,7 +566,7 @@ app.layout = dbc.Container(
                                                 ]
                                             ),
                                         ],
-                                        className="mb-3",
+                                        className="mt-3 mb-3",
                                     ),
                                 ],
                                 md=4,
@@ -1427,62 +1427,25 @@ app.layout = dbc.Container(
                                         ],
                                         className="mt-3",
                                     ),
-                                    # Fraction denominator control
+                                    # Global Statistics Card (moved from right panel)
                                     dbc.Card(
                                         [
+                                            dbc.CardHeader("Global Statistics"),
                                             dbc.CardBody(
-                                                [
-                                                    html.Label(
-                                                        "Max denominator for fraction display:"
-                                                    ),
-                                                    dbc.Row(
-                                                        [
-                                                            dbc.Col(
-                                                                dcc.Slider(
-                                                                    id="matrix-max-denominator-slider",
-                                                                    min=2,
-                                                                    max=100,
-                                                                    step=1,
-                                                                    value=30,
-                                                                    marks={
-                                                                        i: str(i)
-                                                                        for i in range(
-                                                                            10, 101, 10
-                                                                        )
-                                                                    },
-                                                                    tooltip={
-                                                                        "placement": "bottom",
-                                                                        "always_visible": True,
-                                                                    },
-                                                                ),
-                                                                width=9,
-                                                            ),
-                                                            dbc.Col(
-                                                                dbc.Input(
-                                                                    id="matrix-max-denominator-input",
-                                                                    type="number",
-                                                                    value=30,
-                                                                    min=1,
-                                                                    max=1000,
-                                                                    step=1,
-                                                                    style={
-                                                                        "height": "38px"
-                                                                    },
-                                                                ),
-                                                                width=3,
-                                                            ),
-                                                        ],
-                                                        className="mb-3 align-items-center",
-                                                    ),
-                                                    html.Small(
-                                                        "Higher values give more precise fractions but may be harder to read",
-                                                        className="text-muted d-block mb-2",
-                                                    ),
-                                                ]
+                                                html.Div(
+                                                    id="matrix-global-stats",
+                                                    className="p-3 rounded",
+                                                    style={
+                                                        "backgroundColor": "#e8f5e9",  # Pale green
+                                                        "border": "1px solid #c8e6c9",
+                                                        "textAlign": "left",
+                                                    },
+                                                )
                                             ),
                                         ],
                                         className="mt-3 mb-3",
                                     ),
+                                    # Fraction denominator control is removed
                                 ],
                                 md=4,
                                 id="matrix-left-panel",
@@ -1503,6 +1466,7 @@ app.layout = dbc.Container(
                                                     ),
                                                     dbc.CardBody(
                                                         [
+                                                            # Global Statistics Card removed from here
                                                             html.P(
                                                                 "The matrix shows the composition of Allen relations R1 (rows) with R2 (columns).",
                                                                 className="text-muted",
@@ -1603,6 +1567,8 @@ app.layout = dbc.Container(
         dcc.Store(id="comp-fraction-denominator", data=30),
         # Add store for matrix fraction denominator (separate from comp)
         dcc.Store(id="matrix-fraction-denominator", data=30),
+        # Add store for global distribution download
+        dcc.Download(id="download-global-dist"),
     ],
     fluid=True,
     className="p-4",
@@ -3597,6 +3563,192 @@ def toggle_composition_view(active_tab):
             {"display": "none"},
             {"display": "none"},
         )
+
+
+@app.callback(
+    Output("matrix-global-stats", "children"),
+    Input("matrix-results", "data"),
+    prevent_initial_call=True,
+)
+def update_matrix_global_stats(data):
+    if not data or not data.get("global_stats"):
+        return html.Div("No global statistics available yet")
+
+    # Extract global statistics
+    global_stats = data["global_stats"]
+    distribution = global_stats.get("distribution", {})
+    entropy_val = global_stats.get("entropy", 0)
+    gini_val = global_stats.get("gini", 0)
+    js_uniform = global_stats.get("js_uniform", 0)
+    js_fv = global_stats.get("js_fv", 0)
+    js_suliman = global_stats.get("js_suliman", 0)
+    best_fit = global_stats.get("best_fit", "N/A")
+    best_fit_js = global_stats.get("best_fit_js", 0)
+    mode_relation = global_stats.get("mode", "N/A")
+    mode_name = global_stats.get("mode_name", "N/A")
+
+    # Determine colors for JS divergence values based on how good the fit is
+    js_uniform_color = (
+        "success" if js_uniform < 0.1 else "warning" if js_uniform < 0.2 else "danger"
+    )
+    js_fv_color = "success" if js_fv < 0.1 else "warning" if js_fv < 0.2 else "danger"
+    js_suliman_color = (
+        "success" if js_suliman < 0.1 else "warning" if js_suliman < 0.2 else "danger"
+    )
+    best_fit_color = (
+        "success" if best_fit_js < 0.1 else "warning" if best_fit_js < 0.2 else "danger"
+    )
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Strong("Global R3 Distribution Statistics"),
+                    html.Br(),
+                    html.Small(
+                        "(Aggregated across all 169 R1•R2 composition pairs)",
+                        className="text-muted",
+                    ),
+                ],
+                className="mb-3",
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            html.Strong("Entropy: "),
+                            html.Span(f"{entropy_val:.4f}"),
+                        ],
+                        md=6,
+                    ),
+                    dbc.Col(
+                        [
+                            html.Strong("Gini Coefficient: "),
+                            html.Span(f"{gini_val:.4f}"),
+                        ],
+                        md=6,
+                    ),
+                ],
+                className="mb-2",
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            html.Strong("JS (Uniform): "),
+                            html.Span(
+                                f"{js_uniform:.4f}",
+                                className=f"text-{js_uniform_color}",
+                            ),
+                        ],
+                        md=4,
+                    ),
+                    dbc.Col(
+                        [
+                            html.Strong("JS (F-V): "),
+                            html.Span(f"{js_fv:.4f}", className=f"text-{js_fv_color}"),
+                        ],
+                        md=4,
+                    ),
+                    dbc.Col(
+                        [
+                            html.Strong("JS (Suliman): "),
+                            html.Span(
+                                f"{js_suliman:.4f}",
+                                className=f"text-{js_suliman_color}",
+                            ),
+                        ],
+                        md=4,
+                    ),
+                ],
+                className="mb-2",
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            html.Strong("Best Fit Model: "),
+                            html.Span(
+                                f"{best_fit} (JS = {best_fit_js:.4f})",
+                                className=f"text-{best_fit_color}",
+                            ),
+                        ],
+                        md=6,
+                    ),
+                    dbc.Col(
+                        [
+                            html.Strong("Most Common R3: "),
+                            html.Span(f"{mode_relation} - {mode_name}"),
+                        ],
+                        md=6,
+                    ),
+                ],
+                className="mb-2",
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            dbc.Button(
+                                "Export Global Distribution",
+                                id="export-global-dist-button",
+                                color="secondary",
+                                size="sm",
+                                className="mt-3",
+                            ),
+                            dbc.Tooltip(
+                                "Download the global R3 distribution as CSV",
+                                target="export-global-dist-button",
+                                placement="top",
+                            ),
+                        ],
+                        width={"size": 6, "offset": 3},
+                        className="text-center",
+                    ),
+                ]
+            ),
+        ]
+    )
+
+
+# Add export functionality for global distribution data
+@app.callback(
+    Output("download-global-dist", "data"),
+    Input("export-global-dist-button", "n_clicks"),
+    State("matrix-results", "data"),
+    prevent_initial_call=True,
+)
+def export_global_distribution(n_clicks, data):
+    if not n_clicks or not data or not data.get("global_stats"):
+        return dash.no_update
+
+    global_stats = data["global_stats"]
+    distribution = global_stats.get("distribution", {})
+    raw_counts = global_stats.get("raw_counts", {})
+    parameters = data.get("parameters", {})
+
+    # Create a dataframe with the sorted distribution data
+    sorted_relations = sorted(distribution.items(), key=lambda x: x[1], reverse=True)
+
+    df = pd.DataFrame(
+        {
+            "relation": [rel for rel, _ in sorted_relations],
+            "name": [RELATION_NAMES.get(rel, "Unknown") for rel, _ in sorted_relations],
+            "probability": [prob for _, prob in sorted_relations],
+            "count": [raw_counts.get(rel, 0) for rel, _ in sorted_relations],
+        }
+    )
+
+    # Generate a filename with parameters
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    p_born = parameters.get("p_born", 0)
+    p_die = parameters.get("p_die", 0)
+
+    return dcc.send_data_frame(
+        df.to_csv,
+        f"allen-global-dist-p{p_born:.2f}-q{p_die:.2f}-{timestamp}.csv",
+        index=False,
+    )
 
 
 app.index_string = """
