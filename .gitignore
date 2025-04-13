@@ -3,3 +3,16 @@
 
 # Cached simulation results (generated dynamically, not needed in version control)
 *.json
+
+# Python cache and environment files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/

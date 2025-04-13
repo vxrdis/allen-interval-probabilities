@@ -199,6 +199,28 @@ python report_generator.py
 
 ---
 
+## Local Development
+
+1. Create a virtual environment: `python -m venv venv`
+2. Activate it: `source venv/bin/activate` (Unix) or `venv\Scripts\activate` (Windows)
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the application: `python live_simulator.py`
+
+## Deployment on Render
+
+The application is configured to deploy on Render.com with the following settings:
+
+- **Name:** allen-interval
+- **Build Command:** pip install -r requirements.txt
+- **Start Command:** gunicorn app:server
+- **Instance Type:** Starter or Free
+- **Auto-Deploy:** Enabled
+- **Health Check Path:** /
+
+After deployment, the app will be available at: https://allen-interval.onrender.com/
+
+---
+
 ## Literature Review and Related Work
 
 **Allen's Interval Algebra**, first formalised by [James F. Allen (1983)](https://doi.org/10.1145/182.358434), provides a framework of 13 qualitative relations — such as before, meets, overlaps, and their inverses — to describe how time intervals relate.

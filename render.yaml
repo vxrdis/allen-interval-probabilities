@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: allen-interval
+    env: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:server
+    plan: starter
+    branch: main
+    healthCheckPath: /
+    autoDeploy: true

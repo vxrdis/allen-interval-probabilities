@@ -34,6 +34,9 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
 )
 
+# Add this line to expose the Flask server for Gunicorn
+server = app.server
+
 
 # Helper function for number formatting
 def format_number(val, digits=4):
