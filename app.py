@@ -3368,7 +3368,6 @@ def update_matrix_visualization(data):
                             color="#000000",  # Black text for all cells
                             size=12 if len(cell_text) < 10 else 10,
                             family="sans-serif",
-                            style=font_style,
                         ),
                         hovertext=hover_text,
                         hoverlabel=dict(
