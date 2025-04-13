@@ -203,37 +203,84 @@ app.layout = dbc.Container(
                                 dbc.CardHeader("Simulation Parameters"),
                                 dbc.CardBody(
                                     [
+                                        # Birth probability with slider and precise input field
                                         html.Label("Birth Probability (pBorn):"),
-                                        dcc.Slider(
-                                            id="p-born-slider",
-                                            min=0.0,
-                                            max=1.0,
-                                            step=0.05,
-                                            value=0.5,
-                                            marks={
-                                                i / 10: f"{i/10:.1f}" for i in range(11)
-                                            },
-                                            tooltip={
-                                                "placement": "bottom",
-                                                "always_visible": True,
-                                            },
-                                            className="mb-4",
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    dcc.Slider(
+                                                        id="p-born-slider",
+                                                        min=0.0,
+                                                        max=1.0,
+                                                        step=0.05,
+                                                        value=0.5,
+                                                        marks={
+                                                            i / 10: f"{i/10:.1f}"
+                                                            for i in range(11)
+                                                        },
+                                                        tooltip={
+                                                            "placement": "bottom",
+                                                            "always_visible": True,
+                                                        },
+                                                    ),
+                                                    width=9,
+                                                ),
+                                                dbc.Col(
+                                                    dbc.Input(
+                                                        id="p-born-input",
+                                                        type="number",
+                                                        value=0.5,
+                                                        min=0.001,
+                                                        max=1.0,
+                                                        step=0.001,
+                                                        style={"height": "38px"},
+                                                    ),
+                                                    width=3,
+                                                ),
+                                            ],
+                                            className="mb-3 align-items-center",
                                         ),
+                                        # Death probability with slider and precise input field
                                         html.Label("Death Probability (pDie):"),
-                                        dcc.Slider(
-                                            id="p-die-slider",
-                                            min=0.0,
-                                            max=1.0,
-                                            step=0.05,
-                                            value=0.5,
-                                            marks={
-                                                i / 10: f"{i/10:.1f}" for i in range(11)
-                                            },
-                                            tooltip={
-                                                "placement": "bottom",
-                                                "always_visible": True,
-                                            },
-                                            className="mb-4",
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    dcc.Slider(
+                                                        id="p-die-slider",
+                                                        min=0.0,
+                                                        max=1.0,
+                                                        step=0.05,
+                                                        value=0.5,
+                                                        marks={
+                                                            i / 10: f"{i/10:.1f}"
+                                                            for i in range(11)
+                                                        },
+                                                        tooltip={
+                                                            "placement": "bottom",
+                                                            "always_visible": True,
+                                                        },
+                                                    ),
+                                                    width=9,
+                                                ),
+                                                dbc.Col(
+                                                    dbc.Input(
+                                                        id="p-die-input",
+                                                        type="number",
+                                                        value=0.5,
+                                                        min=0.001,
+                                                        max=1.0,
+                                                        step=0.001,
+                                                        style={"height": "38px"},
+                                                    ),
+                                                    width=3,
+                                                ),
+                                            ],
+                                            className="mb-3 align-items-center",
+                                        ),
+                                        # Small helper text for precise value input
+                                        html.Small(
+                                            "Use input fields for precise values (e.g. 0.001)",
+                                            className="text-muted d-block mb-3",
                                         ),
                                         html.Label("Number of Trials:"),
                                         dbc.Input(
@@ -647,13 +694,48 @@ app.layout = dbc.Container(
 )
 
 
+# Replace the four separate callbacks with two combined callbacks that avoid the circular dependency
+@app.callback(
+    Output("p-born-slider", "value"),
+    Output("p-born-input", "value"),
+    Input("p-born-slider", "value"),
+    Input("p-born-input", "value"),
+    prevent_initial_call=True,
+)
+def sync_born_inputs(slider_value, input_value):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if trigger_id == "p-born-slider":
+        return dash.no_update, slider_value
+    else:
+        return input_value, dash.no_update
+
+
+@app.callback(
+    Output("p-die-slider", "value"),
+    Output("p-die-input", "value"),
+    Input("p-die-slider", "value"),
+    Input("p-die-input", "value"),
+    prevent_initial_call=True,
+)
+def sync_die_inputs(slider_value, input_value):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if trigger_id == "p-die-slider":
+        return dash.no_update, slider_value
+    else:
+        return input_value, dash.no_update
+
+
 @app.callback(
     Output("simulation-results", "data"),
     Output("loading-spinner", "children", allow_duplicate=True),
     Output("last-run-time", "children"),
     Input("run-button", "n_clicks"),
-    State("p-born-slider", "value"),
-    State("p-die-slider", "value"),
+    State("p-born-input", "value"),  # Use input field value instead of slider
+    State("p-die-input", "value"),  # Use input field value instead of slider
     State("trials-input", "value"),
     prevent_initial_call=True,
 )
