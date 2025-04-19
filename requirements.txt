@@ -1,9 +1,9 @@
-numpy==1.26.2
-pandas==2.1.3
+numpy
+pandas
 scipy
-dash==2.14.2
-dash-bootstrap-components==1.5.0
+dash
+dash-bootstrap-components
 matplotlib
-plotly==5.18.0
-gunicorn==21.2.0
-tqdm==4.66.1
+plotly
+gunicorn
+tqdm
