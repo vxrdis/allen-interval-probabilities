@@ -354,9 +354,9 @@ app.layout = dbc.Container(
                                                                     id="p-born-input",
                                                                     type="number",
                                                                     value=0.5,
-                                                                    min=0.001,
+                                                                    min=0.0,
                                                                     max=1.0,
-                                                                    step=0.001,
+                                                                    step=0.1,
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -398,9 +398,9 @@ app.layout = dbc.Container(
                                                                     id="p-die-input",
                                                                     type="number",
                                                                     value=0.5,
-                                                                    min=0.001,
+                                                                    min=0.0,
                                                                     max=1.0,
-                                                                    step=0.001,
+                                                                    step=0.1,
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -421,7 +421,7 @@ app.layout = dbc.Container(
                                                         type="number",
                                                         min=100,
                                                         step=100,
-                                                        value=1000,
+                                                        value=100000,
                                                         className="mb-4",
                                                     ),
                                                     dbc.Button(
@@ -913,7 +913,7 @@ app.layout = dbc.Container(
                                                                     min=0.0,
                                                                     max=1.0,
                                                                     step=0.05,
-                                                                    value=0.1,
+                                                                    value=0.5,
                                                                     marks={
                                                                         i
                                                                         / 10: f"{i/10:.1f}"
@@ -932,10 +932,10 @@ app.layout = dbc.Container(
                                                                 dbc.Input(
                                                                     id="comp-p-born-input",
                                                                     type="number",
-                                                                    value=0.1,
-                                                                    min=0.001,
+                                                                    value=0.5,
+                                                                    min=0.0,
                                                                     max=1.0,
-                                                                    step=0.001,
+                                                                    step=0.1,
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -957,7 +957,7 @@ app.layout = dbc.Container(
                                                                     min=0.0,
                                                                     max=1.0,
                                                                     step=0.05,
-                                                                    value=0.1,
+                                                                    value=0.5,
                                                                     marks={
                                                                         i
                                                                         / 10: f"{i/10:.1f}"
@@ -976,10 +976,10 @@ app.layout = dbc.Container(
                                                                 dbc.Input(
                                                                     id="comp-p-die-input",
                                                                     type="number",
-                                                                    value=0.1,
-                                                                    min=0.001,
+                                                                    value=0.5,
+                                                                    min=0.0,
                                                                     max=1.0,
-                                                                    step=0.001,
+                                                                    step=0.1,
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -1000,7 +1000,7 @@ app.layout = dbc.Container(
                                                         type="number",
                                                         min=1000,
                                                         step=1000,
-                                                        value=10000,
+                                                        value=100000,
                                                         className="mb-3",
                                                     ),
                                                     html.Label("Results Limit:"),
@@ -1009,7 +1009,7 @@ app.layout = dbc.Container(
                                                         type="number",
                                                         min=100,
                                                         step=100,
-                                                        value=10000,
+                                                        value=100000,
                                                         className="mb-4",
                                                     ),
                                                     # Relation selection (now directly here, not in tabs)
@@ -1046,7 +1046,7 @@ app.layout = dbc.Container(
                                                                     for rel in ALLEN_RELATIONS
                                                                 ],
                                                                 value=ALLEN_RELATIONS[
-                                                                    8
+                                                                    12
                                                                 ],
                                                                 clearable=False,
                                                                 className="mb-4",
@@ -1300,7 +1300,7 @@ app.layout = dbc.Container(
                                                                     min=0.0,
                                                                     max=1.0,
                                                                     step=0.05,
-                                                                    value=0.1,
+                                                                    value=0.5,
                                                                     marks={
                                                                         i
                                                                         / 10: f"{i/10:.1f}"
@@ -1319,10 +1319,10 @@ app.layout = dbc.Container(
                                                                 dbc.Input(
                                                                     id="matrix-p-born-input",
                                                                     type="number",
-                                                                    value=0.1,
-                                                                    min=0.001,
+                                                                    value=0.5,
+                                                                    min=0.0,
                                                                     max=1.0,
-                                                                    step=0.001,
+                                                                    step=0.1,
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -1344,7 +1344,7 @@ app.layout = dbc.Container(
                                                                     min=0.0,
                                                                     max=1.0,
                                                                     step=0.05,
-                                                                    value=0.1,
+                                                                    value=0.5,
                                                                     marks={
                                                                         i
                                                                         / 10: f"{i/10:.1f}"
@@ -1363,10 +1363,10 @@ app.layout = dbc.Container(
                                                                 dbc.Input(
                                                                     id="matrix-p-die-input",
                                                                     type="number",
-                                                                    value=0.1,
-                                                                    min=0.001,
+                                                                    value=0.5,
+                                                                    min=0.0,
                                                                     max=1.0,
-                                                                    step=0.001,
+                                                                    step=0.1,
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -1579,6 +1579,7 @@ app.layout = dbc.Container(
 @app.callback(
     Output("p-born-slider", "value"),
     Output("p-born-input", "value"),
+    Output("p-die-slider", "value", allow_duplicate=True),  # Added this output
     Input("p-born-slider", "value"),
     Input("p-born-input", "value"),
     prevent_initial_call=True,
@@ -1588,14 +1589,17 @@ def sync_born_inputs(slider_value, input_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if trigger_id == "p-born-slider":
-        return dash.no_update, slider_value
+        # When slider changes, update both the input and the die slider
+        return dash.no_update, slider_value, slider_value
     else:
-        return input_value, dash.no_update
+        # When input changes, only update the born slider
+        return input_value, dash.no_update, dash.no_update
 
 
 @app.callback(
     Output("p-die-slider", "value"),
     Output("p-die-input", "value"),
+    Output("p-born-slider", "value", allow_duplicate=True),  # Added this output
     Input("p-die-slider", "value"),
     Input("p-die-input", "value"),
     prevent_initial_call=True,
@@ -1605,14 +1609,17 @@ def sync_die_inputs(slider_value, input_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if trigger_id == "p-die-slider":
-        return dash.no_update, slider_value
+        # When slider changes, update both the input and the born slider
+        return dash.no_update, slider_value, slider_value
     else:
-        return input_value, dash.no_update
+        # When input changes, only update the die slider
+        return input_value, dash.no_update, dash.no_update
 
 
 @app.callback(
     Output("comp-p-born-slider", "value"),
     Output("comp-p-born-input", "value"),
+    Output("comp-p-die-slider", "value", allow_duplicate=True),  # Added this output
     Input("comp-p-born-slider", "value"),
     Input("comp-p-born-input", "value"),
     prevent_initial_call=True,
@@ -1622,14 +1629,17 @@ def sync_comp_born_inputs(slider_value, input_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if trigger_id == "comp-p-born-slider":
-        return dash.no_update, slider_value
+        # When slider changes, update both the input and the die slider
+        return dash.no_update, slider_value, slider_value
     else:
-        return input_value, dash.no_update
+        # When input changes, only update the born slider
+        return input_value, dash.no_update, dash.no_update
 
 
 @app.callback(
     Output("comp-p-die-slider", "value"),
     Output("comp-p-die-input", "value"),
+    Output("comp-p-born-slider", "value", allow_duplicate=True),  # Added this output
     Input("comp-p-die-slider", "value"),
     Input("comp-p-die-input", "value"),
     prevent_initial_call=True,
@@ -1639,14 +1649,17 @@ def sync_comp_die_inputs(slider_value, input_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if trigger_id == "comp-p-die-slider":
-        return dash.no_update, slider_value
+        # When slider changes, update both the input and the born slider
+        return dash.no_update, slider_value, slider_value
     else:
-        return input_value, dash.no_update
+        # When input changes, only update the die slider
+        return input_value, dash.no_update, dash.no_update
 
 
 @app.callback(
     Output("matrix-p-born-slider", "value"),
     Output("matrix-p-born-input", "value"),
+    Output("matrix-p-die-slider", "value", allow_duplicate=True),  # Added this output
     Input("matrix-p-born-slider", "value"),
     Input("matrix-p-born-input", "value"),
     prevent_initial_call=True,
@@ -1656,14 +1669,17 @@ def sync_matrix_born_inputs(slider_value, input_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if trigger_id == "matrix-p-born-slider":
-        return dash.no_update, slider_value
+        # When slider changes, update both the input and the die slider
+        return dash.no_update, slider_value, slider_value
     else:
-        return input_value, dash.no_update
+        # When input changes, only update the born slider
+        return input_value, dash.no_update, dash.no_update
 
 
 @app.callback(
     Output("matrix-p-die-slider", "value"),
     Output("matrix-p-die-input", "value"),
+    Output("matrix-p-born-slider", "value", allow_duplicate=True),  # Added this output
     Input("matrix-p-die-slider", "value"),
     Input("matrix-p-die-input", "value"),
     prevent_initial_call=True,
@@ -1673,9 +1689,11 @@ def sync_matrix_die_inputs(slider_value, input_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if trigger_id == "matrix-p-die-slider":
-        return dash.no_update, slider_value
+        # When slider changes, update both the input and the born slider
+        return dash.no_update, slider_value, slider_value
     else:
-        return input_value, dash.no_update
+        # When input changes, only update the die slider
+        return input_value, dash.no_update, dash.no_update
 
 
 @app.callback(
