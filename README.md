@@ -93,6 +93,8 @@ Key aims include:
 - Testing the **Principle of Indifference** and comparing to predictions from Suliman and Fernando–Vogel
 - Mapping the structure of the composition table through **probabilistic chaining**
 - Building an interactive dashboard for exploring simulation results
+- Visualizing entropy distributions across parameter spaces
+- Providing comprehensive statistical analysis of relation probabilities
 
 ## Theoretical Motivation and Context
 
@@ -179,23 +181,22 @@ python composition_runner.py --trials 10000 --pBorn 0.1 --pDie 0.1
 
 This will systematically generate all 169 possible relation pairs (13×13) and collect statistics on their compositions.
 
-### Generating Reports
+### Interactive Web Dashboard
 
-Generate reports from simulation results:
-
-```bash
-# Generate simulation results report
-python sim_results.py --input sim_results.json --output SIM_RESULTS.md
-
-# Generate composition results report
-python comp_results.py --input comp_results.json --output COMP_RESULTS.md
-```
-
-Or to automatically generate all updated project reports:
+To explore the simulation results through an interactive web interface:
 
 ```bash
-python report_generator.py
+python app.py
 ```
+
+The dashboard features:
+
+- Relation distribution visualization with comparison to theoretical models
+- Parameter space exploration with real-time simulation
+- Composition analysis for any pair of Allen relations
+- Full 13×13 composition matrix visualization
+- Statistical metrics including entropy, Gini coefficient, and JS divergence
+- Export functionality for charts, data tables, and simulation results
 
 ---
 
@@ -409,6 +410,27 @@ This pattern emerges clearly in simulations at extreme low `p` and `q`, supporti
 
 To effectively communicate findings, **interactive visualisations** and comprehensive reports are generated, allowing intuitive exploration of interval relation probabilities and compositional logic.
 
+### Interactive Dashboard
+
+The project includes a web-based dashboard with three main components:
+
+1. **Relation Simulation**: Visualizes the probability distribution of Allen relations under specific birth/death parameters
+
+   - Real-time statistical analysis with entropy, Gini coefficient, and JS divergence measures
+   - Comparison with theoretical models (Uniform, Fernando-Vogel, and Suliman)
+   - Parameter space exploration through an entropy heatmap
+
+2. **Composition Analysis**: Explores the probabilities of resulting relations when two Allen relations are composed
+
+   - Visual representation of composition outcomes with percentage and fraction approximations
+   - Statistical breakdown of composition frequency and distribution
+   - Reference tables for Allen relation compositions
+
+3. **Matrix Analysis**: Provides a comprehensive view of all 169 possible relation compositions
+   - Interactive heatmap visualization of the full composition matrix
+   - Cell-level detailed breakdown of composition results
+   - Global statistics across all compositions
+
 ### Report Types
 
 - **SIM_RESULTS.md**: Detailed statistical breakdown of relation probabilities under different parameter settings
@@ -423,18 +445,6 @@ To effectively communicate findings, **interactive visualisations** and comprehe
   - Includes approximate fraction representations for easier interpretation
   - Highlights high-entropy vs. deterministic compositions
   - Provides sorted tables of most common composition patterns
-
-### Statistical Measures
-
-The reports include several key statistical measures:
-
-- **Entropy**: Quantifies uncertainty in relation distributions (higher values indicate more even distributions)
-- **Normalised Entropy**: Entropy scaled to [0,1] range for easier comparison
-- **JS Divergence**: Jensen-Shannon divergence comparing empirical distributions to theoretical models
-- **Chi-Square Tests**: Statistical tests measuring goodness-of-fit to theoretical distributions
-- **Gini Coefficient**: Measures distribution inequality (0 = perfect equality, 1 = maximum inequality)
-
-For detailed results and extensive visualisations, please refer to the generated reports in `SIM_RESULTS.md` and `COMP_RESULTS.md`.
 
 ---
 
@@ -454,11 +464,13 @@ Current and upcoming developments include:
 - Analysing how compositions vary under different stochastic assumptions
 - Mapping **probability flows** through composition chains
 
-### Visualisation Enhancements
+### Visualisation Enhancements ✓
 
-- Adding summary plots (bar graphs, heatmaps) to illustrate frequency across simulation runs
-- Developing **interactive dashboards** for exploring parameter spaces
-- Creating comparative visualisations of theoretical vs. empirical distributions
+- Interactive dashboards with parameter space exploration ✓
+- Entropy heatmaps across birth-death probability parameters ✓
+- Comparative visualisations of theoretical vs. empirical distributions ✓
+- Matrix visualization for all 169 composition pairs ✓
+- Enhanced styling and UI improvements for better user experience ✓
 
 ### Statistical Evaluation ✓
 
@@ -471,6 +483,13 @@ Current and upcoming developments include:
 - Integrating with temporal expression extraction systems
 - Applying probabilistic reasoning to ambiguous temporal references in text
 - Developing hybrid neural-symbolic approaches for temporal understanding
+- Creating annotation tools for temporal relation labeling
+
+### Cloud Deployment and API Services
+
+- Providing cloud-hosted interactive dashboards for wider accessibility
+- Developing an API for programmatic access to simulation results
+- Creating a public dataset of simulation results across parameter spaces
 
 ---
 

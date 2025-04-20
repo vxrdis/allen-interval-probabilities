@@ -356,7 +356,7 @@ app.layout = dbc.Container(
                                                                     value=0.5,
                                                                     min=0.0,
                                                                     max=1.0,
-                                                                    step=0.1,
+                                                                    step=0.0001,  # Changed from 0.1 to 0.001
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -400,7 +400,7 @@ app.layout = dbc.Container(
                                                                     value=0.5,
                                                                     min=0.0,
                                                                     max=1.0,
-                                                                    step=0.1,
+                                                                    step=0.0001,  # Changed from 0.1 to 0.001
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -935,7 +935,7 @@ app.layout = dbc.Container(
                                                                     value=0.5,
                                                                     min=0.0,
                                                                     max=1.0,
-                                                                    step=0.1,
+                                                                    step=0.0001,  # Changed from 0.1 to 0.001
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -979,7 +979,7 @@ app.layout = dbc.Container(
                                                                     value=0.5,
                                                                     min=0.0,
                                                                     max=1.0,
-                                                                    step=0.1,
+                                                                    step=0.0001,  # Changed from 0.1 to 0.001
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -1322,7 +1322,7 @@ app.layout = dbc.Container(
                                                                     value=0.5,
                                                                     min=0.0,
                                                                     max=1.0,
-                                                                    step=0.1,
+                                                                    step=0.0001,  # Changed from 0.1 to 0.001
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -1366,7 +1366,7 @@ app.layout = dbc.Container(
                                                                     value=0.5,
                                                                     min=0.0,
                                                                     max=1.0,
-                                                                    step=0.1,
+                                                                    step=0.0001,  # Changed from 0.1 to 0.001
                                                                     style={
                                                                         "height": "38px"
                                                                     },
@@ -1499,6 +1499,57 @@ app.layout = dbc.Container(
                                                         ]
                                                     ),
                                                 ]
+                                            ),
+                                            # Add the two new visualization cards
+                                            dbc.Card(
+                                                [
+                                                    dbc.CardHeader(
+                                                        "Entropy Heatmap of Composition Outcomes"
+                                                    ),
+                                                    dbc.CardBody(
+                                                        [
+                                                            html.P(
+                                                                "This heatmap shows the entropy (uncertainty) of R3 outcomes for each composition pair.",
+                                                                className="text-muted",
+                                                            ),
+                                                            dcc.Graph(
+                                                                id="entropy-composition-heatmap",
+                                                                config={
+                                                                    "responsive": True
+                                                                },
+                                                                style={
+                                                                    "height": "500px"
+                                                                },
+                                                            ),
+                                                        ]
+                                                    ),
+                                                ],
+                                                className="mt-4",
+                                            ),
+                                            dbc.Card(
+                                                [
+                                                    dbc.CardHeader(
+                                                        "Global R3 Distribution"
+                                                    ),
+                                                    dbc.CardBody(
+                                                        [
+                                                            html.P(
+                                                                "This chart shows the overall probability of each Allen relation appearing as an R3 outcome across all compositions.",
+                                                                className="text-muted",
+                                                            ),
+                                                            dcc.Graph(
+                                                                id="global-r3-distribution",
+                                                                config={
+                                                                    "responsive": True
+                                                                },
+                                                                style={
+                                                                    "height": "400px"
+                                                                },
+                                                            ),
+                                                        ]
+                                                    ),
+                                                ],
+                                                className="mt-4",
                                             ),
                                             # Add reference tables to right panel, below the matrix
                                             html.Div(
@@ -2965,6 +3016,9 @@ def update_composition_ui(results, max_denominator):
     Output("matrix-results", "data"),
     Output("matrix-spinner", "children"),
     Output("matrix-status", "children"),
+    Output(
+        "matrix-global-stats", "children", allow_duplicate=True
+    ),  # Fix callback conflict
     Input("run-matrix-button", "n_clicks"),
     State("matrix-p-born-input", "value"),
     State("matrix-p-die-input", "value"),
@@ -2974,7 +3028,7 @@ def update_composition_ui(results, max_denominator):
 )
 def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
     if n_clicks is None:
-        return {}, dash.no_update, dash.no_update
+        return None, dash.no_update, dash.no_update, dash.no_update
 
     # Add validation for input values
     if p_born is None or p_die is None or trials is None or limit is None:
@@ -2982,7 +3036,7 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
             "Error: Please provide valid values for all parameters.",
             color="danger",
         )
-        return {}, dash.no_update, error_status
+        return None, dash.no_update, error_status, dash.no_update
 
     try:
         # Calculate the matrix - this may take some time
@@ -3001,13 +3055,14 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
         missing_compositions = []
 
         for r1 in ALLEN_RELATIONS:
-            for r2 in ALLEN_RELATIONS:
-                composition = matrix_data.get(r1, {}).get(r2, {}).get("composition", {})
-                if composition:
-                    populated_cells += 1
-                else:
-                    # This is a missing composition - track it
-                    missing_compositions.append((r1, r2))
+            if r1 in matrix_data:
+                for r2 in ALLEN_RELATIONS:
+                    if r2 in matrix_data[r1]:
+                        populated_cells += 1
+                    else:
+                        missing_compositions.append(f"{r1} ∘ {r2}")
+            else:
+                missing_compositions.extend([f"{r1} ∘ {r2}"] for r2 in ALLEN_RELATIONS)
 
         # Create a result object with metadata
         result = {
@@ -3021,37 +3076,34 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
                 "missing_count": len(missing_compositions),
                 "missing_compositions": missing_compositions,
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "duration": str(calculation_duration).split(".")[
-                    0
-                ],  # Format as HH:MM:SS
+                "duration": str(calculation_duration).split(".")[0],
             },
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "matrix": matrix_data,
             "global_stats": global_stats,
         }
 
-        # Create missing compositions dropdown content - fixing the duplicate numbering issue
+        # Create missing compositions dropdown content
         missing_details = None
         if missing_compositions:
-            missing_list_items = []
-            for r1, r2 in missing_compositions:  # Removed the index counter
-                item_text = f"{r1} ∘ {r2}"  # Removed manual numbering
-                missing_list_items.append(html.Li(item_text))
-
             missing_details = html.Details(
                 [
-                    html.Summary(
-                        f"⚠ Missing compositions: {len(missing_compositions)}"
+                    html.Summary(f"Missing compositions: {len(missing_compositions)}"),
+                    html.Ul(
+                        [html.Li(comp) for comp in missing_compositions[:20]],
+                        className="mb-0",
                     ),
-                    html.Ol(
-                        missing_list_items
-                    ),  # html.Ol handles numbering automatically
+                    html.Small(
+                        f"(+{len(missing_compositions) - 20} more)"
+                        if len(missing_compositions) > 20
+                        else ""
+                    ),
                 ],
-                className="mt-2 mb-2",
+                className="mt-2",
             )
 
-        # Create a card to display the matrix
-        matrix_card = [
+        # Create spinner children with all three visualizations
+        matrix_spinner_children = [
             dbc.Card(
                 [
                     dbc.CardHeader(
@@ -3095,7 +3147,44 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
                     ),
                 ]
             ),
-            # Add reference tables after the matrix
+            dbc.Card(
+                [
+                    dbc.CardHeader("Entropy Heatmap of Composition Outcomes"),
+                    dbc.CardBody(
+                        [
+                            html.P(
+                                "This heatmap shows the entropy (uncertainty) of R3 outcomes for each composition pair.",
+                                className="text-muted",
+                            ),
+                            dcc.Graph(
+                                id="entropy-composition-heatmap",
+                                config={"responsive": True},
+                                style={"height": "500px"},
+                            ),
+                        ]
+                    ),
+                ],
+                className="mt-4",
+            ),
+            dbc.Card(
+                [
+                    dbc.CardHeader("Global R3 Distribution"),
+                    dbc.CardBody(
+                        [
+                            html.P(
+                                "This chart shows the overall probability of each Allen relation appearing as an R3 outcome across all compositions.",
+                                className="text-muted",
+                            ),
+                            dcc.Graph(
+                                id="global-r3-distribution",
+                                config={"responsive": True},
+                                style={"height": "400px"},
+                            ),
+                        ]
+                    ),
+                ],
+                className="mt-4",
+            ),
             html.Div(
                 [
                     html.Hr(className="mt-4"),
@@ -3150,16 +3239,19 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
                         ),
                     ]
                 ),
-                # Add the missing compositions details element
                 missing_details if missing_compositions else "",
             ],
             color="success",
             className="mt-3",
         )
 
-        return result, matrix_card, status
+        # Get global stats display
+        global_stats_html = update_matrix_global_stats(data=result)
+
+        return result, matrix_spinner_children, status, global_stats_html
 
     except Exception as e:
+        # Handle errors
         error_card = [
             dbc.Card(
                 [
@@ -3172,7 +3264,6 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
                     ),
                 ]
             ),
-            # Still keep reference tables visible on error
             html.Div(
                 [
                     html.Hr(className="mt-4"),
@@ -3188,7 +3279,7 @@ def run_matrix_calculation(n_clicks, p_born, p_die, trials, limit):
             color="danger",
         )
 
-        return {}, error_card, error_status
+        return None, error_card, error_status, dash.no_update
 
 
 @app.callback(
@@ -3766,6 +3857,250 @@ def export_global_distribution(n_clicks, data):
         f"allen-global-dist-p{p_born:.2f}-q{p_die:.2f}-{timestamp}.csv",
         index=False,
     )
+
+
+@app.callback(
+    Output("entropy-composition-heatmap", "figure"),
+    Input("matrix-results", "data"),
+    prevent_initial_call=True,
+)
+def update_entropy_heatmap(data):
+    if not data or not data.get("matrix"):
+        # Return empty figure with instructions if no data
+        empty_fig = go.Figure()
+        empty_fig.update_layout(
+            title="Entropy Heatmap - No Data",
+            annotations=[
+                {
+                    "text": "Run matrix calculation to populate the entropy heatmap",
+                    "xref": "paper",
+                    "yref": "paper",
+                    "x": 0.5,
+                    "y": 0.5,
+                    "showarrow": False,
+                    "font": {"size": 14},
+                }
+            ],
+            height=500,
+            margin=dict(l=50, r=20, t=50, b=50),
+        )
+        return empty_fig
+
+    # Extract matrix data
+    matrix = data.get("matrix", {})
+    params = data.get("parameters", {})
+
+    # Create arrays for the heatmap
+    x = list(ALLEN_RELATIONS)  # Columns (R2)
+    y = list(
+        reversed(ALLEN_RELATIONS)
+    )  # Rows (R1) - reversed to match traditional visualization
+
+    # Initialize the z-values (entropy) and hover text matrices
+    z = []
+    hover_text = []
+
+    for r1 in y:
+        entropy_row = []
+        hover_row = []
+        for r2 in x:
+            cell_data = matrix.get(r1, {}).get(r2, {"composition": {}, "total": 0})
+            composition = cell_data.get("composition", {})
+            total = cell_data.get("total", 0)
+
+            # Calculate entropy if we have data
+            if total > 0:
+                distribution = {
+                    rel: data["percentage"] / 100 for rel, data in composition.items()
+                }
+                entropy_val = entropy(distribution)
+
+                # Find most probable outcome
+                most_probable = None
+                max_prob = 0
+                for rel, data in composition.items():
+                    if data["percentage"] > max_prob:
+                        most_probable = rel
+                        max_prob = data["percentage"]
+
+                # Format hover text with detailed information
+                hover_info = (
+                    f"R1: {r1} ({RELATION_NAMES.get(r1, 'Unknown')})<br>"
+                    + f"R2: {r2} ({RELATION_NAMES.get(r2, 'Unknown')})<br>"
+                    + f"Entropy: {entropy_val:.4f}<br>"
+                    + f"Most probable: {most_probable} ({RELATION_NAMES.get(most_probable, 'Unknown')})<br>"
+                    + f"Probability: {max_prob:.2f}%"
+                )
+            else:
+                entropy_val = None
+                hover_info = (
+                    f"R1: {r1} ({RELATION_NAMES.get(r1, 'Unknown')})<br>"
+                    + f"R2: {r2} ({RELATION_NAMES.get(r2, 'Unknown')})<br>"
+                    + "No data"
+                )
+
+            entropy_row.append(entropy_val)
+            hover_row.append(hover_info)
+
+        z.append(entropy_row)
+        hover_text.append(hover_row)
+
+    # Create the heatmap figure
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z,
+            x=x,
+            y=y,
+            colorscale="Viridis",
+            colorbar=dict(
+                title=dict(  # Fix: changed from titleside to proper nested title structure
+                    text="Entropy", side="right", font=dict(size=14)
+                ),
+            ),
+            hoverinfo="text",
+            text=hover_text,
+            zmin=0,
+            zmax=3.7,  # Max theoretical entropy for 13 relations is log(13) ≈ 3.7
+        )
+    )
+
+    # Update layout with nice formatting
+    fig.update_layout(
+        title={
+            "text": f"Entropy of R3 Outcomes for Each Composition Pair (p={params.get('p_born', 0):.2f}, q={params.get('p_die', 0):.2f})",
+            "y": 0.95,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+        },
+        xaxis_title="R2 (Second Relation)",
+        yaxis_title="R1 (First Relation)",
+        height=500,
+        margin=dict(l=50, r=20, t=50, b=50),
+        xaxis=dict(
+            tickmode="array",
+            tickvals=list(range(len(x))),
+            ticktext=x,
+            title_standoff=15,
+        ),
+        yaxis=dict(
+            tickmode="array",
+            tickvals=list(range(len(y))),
+            ticktext=y,
+            title_standoff=15,
+        ),
+        annotations=[
+            dict(
+                text="Darker = More Uncertain",
+                x=1.01,
+                y=0.5,
+                xref="paper",
+                yref="paper",
+                showarrow=False,
+                font=dict(size=12),
+                textangle=-90,
+            )
+        ],
+    )
+
+    return fig
+
+
+# Add missing callback for global R3 distribution chart
+@app.callback(
+    Output("global-r3-distribution", "figure"),
+    Input("matrix-results", "data"),
+    prevent_initial_call=True,
+)
+def update_global_r3_distribution(data):
+    if not data or not data.get("global_stats"):
+        # Return empty figure with instructions if no data
+        empty_fig = go.Figure()
+        empty_fig.update_layout(
+            title="Global R3 Distribution - No Data",
+            annotations=[
+                {
+                    "text": "Run matrix calculation to see the global distribution",
+                    "xref": "paper",
+                    "yref": "paper",
+                    "x": 0.5,
+                    "y": 0.5,
+                    "showarrow": False,
+                    "font": {"size": 14},
+                }
+            ],
+            height=400,
+            margin=dict(l=50, r=20, t=50, b=50),
+        )
+        return empty_fig
+
+    # Extract global statistics
+    global_stats = data.get("global_stats", {})
+    distribution = global_stats.get("distribution", {})
+    raw_counts = global_stats.get("raw_counts", {})
+    params = data.get("parameters", {})
+
+    if not distribution:
+        return empty_fig
+
+    # Use standard ALLEN_RELATIONS order instead of sorting by frequency
+    relation_codes = list(ALLEN_RELATIONS)
+    relation_names = [RELATION_NAMES.get(rel, rel) for rel in relation_codes]
+    probabilities = [distribution.get(rel, 0) * 100 for rel in relation_codes]
+    counts = [raw_counts.get(rel, 0) for rel in relation_codes]
+    colors = [RELATION_COLORS.get(rel, "#000000") for rel in relation_codes]
+
+    # Create the bar chart
+    fig = go.Figure()
+
+    # Use customdata for hover information
+    custom_data = list(zip(counts, [f"{p:.2f}%" for p in probabilities]))
+
+    fig.add_trace(
+        go.Bar(
+            x=relation_codes,
+            y=probabilities,
+            marker_color=colors,
+            text=[f"{p:.2f}%" for p in probabilities],
+            textposition="outside",
+            hovertemplate="<b>%{x}</b> - %{customdata[1]}<br>Count: %{customdata[0]}<br>%{text}<extra></extra>",
+            customdata=custom_data,
+        )
+    )
+
+    # Add theoretical models reference lines if needed
+    # For example:
+    # fig.add_trace(
+    #     go.Scatter(
+    #         x=relation_codes,
+    #         y=[UNIFORM_DISTRIBUTION.get(rel, 0) * 100 for rel in relation_codes],
+    #         mode="lines+markers",
+    #         name="Uniform",
+    #         line=dict(color="black", width=2, dash="dash"),
+    #     )
+    # )
+
+    fig.update_layout(
+        title=f"Global R3 Distribution (p={params.get('p_born', 0):.2f}, q={params.get('p_die', 0):.2f})",
+        xaxis_title="Relation Type (R3)",
+        yaxis_title="Probability (%)",
+        template="plotly_white",
+        height=400,
+        xaxis=dict(
+            tickangle=-45,
+            tickmode="array",
+            tickvals=relation_codes,
+            ticktext=[
+                f"{code} - {name}" for code, name in zip(relation_codes, relation_names)
+            ],
+        ),
+        yaxis=dict(
+            ticksuffix="%",
+            range=[0, max(probabilities) * 1.1] if probabilities else [0, 100],
+        ),
+    )
+
+    return fig
 
 
 app.index_string = """
