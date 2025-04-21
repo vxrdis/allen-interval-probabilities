@@ -12,9 +12,9 @@ from tqdm import tqdm
 from constants import ALLEN_RELATIONS
 from simulations import updateState, arCode
 
-DEFAULT_TRIALS = 100000
-DEFAULT_P_BORN = 0.05
-DEFAULT_P_DIE = 0.05
+DEFAULT_TRIALS = 1000000
+DEFAULT_P_BORN = 0.5
+DEFAULT_P_DIE = 0.5
 DEFAULT_OUTPUT_FILE = "comp_results.json"
 
 
@@ -160,6 +160,8 @@ def main():
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--seed", type=int)
     args = parser.parse_args()
+    if args.limit is None:
+        args.limit = args.trials
 
     stats = run(args.pBorn, args.pDie, args.trials, args.limit, args.quiet, args.seed)
     out_path = Path(args.output)

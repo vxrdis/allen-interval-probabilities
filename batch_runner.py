@@ -4,7 +4,6 @@ import math
 import random
 import time
 from datetime import datetime, timedelta
-from itertools import product
 from pathlib import Path
 
 from tqdm import tqdm
@@ -13,9 +12,8 @@ import constants as c
 from simulations import arSimulate
 from stats import describe_global
 
-DEFAULT_TRIALS = 500
+DEFAULT_TRIALS = 1000
 DEFAULT_OUTPUT = "sim_results.json"
-DEFAULT_P_VALUES = [0.001, 0.01, 0.05, 0.1, 0.2, 0.5]
 
 
 class InfEncoder(json.JSONEncoder):
@@ -25,13 +23,6 @@ class InfEncoder(json.JSONEncoder):
         elif isinstance(obj, timedelta):
             return str(obj)
         return super().default(obj)
-
-
-def parse_p_values(raw):
-    try:
-        return [float(x.strip()) for x in raw.split(",") if x.strip()]
-    except ValueError:
-        raise argparse.ArgumentTypeError("Invalid p-values format.")
 
 
 def collect_stats(counts):
@@ -79,7 +70,7 @@ def collect_stats(counts):
     }
 
 
-def run_batch(trials, p_values, short=False, quiet=False, seed=None):
+def run_batch(trials, pBorn, pDie, short=False, quiet=False, seed=None):
     if seed is not None:
         random.seed(seed)
         if not quiet:
@@ -87,48 +78,69 @@ def run_batch(trials, p_values, short=False, quiet=False, seed=None):
 
     start = time.time()
     timestamp = datetime.now().isoformat(timespec="seconds")
-    grid = list(product(p_values, repeat=2))
     results = {}
 
-    for p, q in tqdm(grid, disable=quiet, desc="Simulating"):
-        counts = arSimulate(p, q, trials)
-        result = {"p": p, "q": q, "stats": collect_stats(counts)}
-        if not short:
-            result["counts"] = {rel: counts.get(rel, 0) for rel in c.ALLEN_RELATIONS}
-        results[f"{p:.6f}_{q:.6f}"] = result
+    if not quiet:
+        print(f"Simulating with pBorn={pBorn}, pDie={pDie}, trials={trials}")
+
+    counts = arSimulate(pBorn, pDie, trials)
+    result = {"p": pBorn, "q": pDie, "stats": collect_stats(counts)}
+    if not short:
+        result["counts"] = {rel: counts.get(rel, 0) for rel in c.ALLEN_RELATIONS}
+    results[f"{pBorn:.6f}_{pDie:.6f}"] = result
 
     duration = timedelta(seconds=int(time.time() - start))
     metadata = {
         "timestamp": timestamp,
         "duration": str(duration),
         "trials": trials,
-        "p_values": p_values,
-        "runs": len(grid),
+        "pBorn": pBorn,
+        "pDie": pDie,
+        "runs": 1,
     }
 
     return results, metadata
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Allen relation batch simulator")
-    parser.add_argument("--trials", type=int)
-    parser.add_argument("--p-values", type=parse_p_values)
-    parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT)
-    parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--short", action="store_true")
-    parser.add_argument("--seed", type=int)
+    parser = argparse.ArgumentParser(description="Allen relation simulator")
+    parser.add_argument(
+        "--trials",
+        type=int,
+        default=DEFAULT_TRIALS,
+        help=f"Number of trials to run (default: {DEFAULT_TRIALS})",
+    )
+    parser.add_argument(
+        "--pBorn", type=float, required=True, help="Birth probability (p)"
+    )
+    parser.add_argument(
+        "--pDie", type=float, required=True, help="Death probability (q)"
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=DEFAULT_OUTPUT,
+        help=f"Output file path (default: {DEFAULT_OUTPUT})",
+    )
+    parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
+    parser.add_argument(
+        "--short", action="store_true", help="Exclude raw counts in output"
+    )
+    parser.add_argument("--seed", type=int, help="Random seed for reproducibility")
     args = parser.parse_args()
 
-    trials = args.trials or DEFAULT_TRIALS
-    p_values = args.p_values or DEFAULT_P_VALUES
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not args.quiet:
-        print(f"Running {len(p_values)**2} simulations × {trials} trials each")
+        print(
+            f"Running simulation with p={args.pBorn}, q={args.pDie}, trials={args.trials}"
+        )
         print(f"Output: {out_path}")
 
-    results, metadata = run_batch(trials, p_values, args.short, args.quiet, args.seed)
+    results, metadata = run_batch(
+        args.trials, args.pBorn, args.pDie, args.short, args.quiet, args.seed
+    )
 
     with out_path.open("w") as f:
         json.dump(

@@ -10,7 +10,7 @@ from constants import (
 )
 from stats import entropy, gini, js_divergence
 
-DEFAULT_INPUT, DEFAULT_OUTPUT = "comp_balanced.json", "COMP_RESULTS.md"
+DEFAULT_INPUT, DEFAULT_OUTPUT = "comp_results.json", "COMP_RESULTS.md"
 
 
 def format_number(val, digits=4):
