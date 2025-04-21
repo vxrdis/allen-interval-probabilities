@@ -1,4 +1,4 @@
-import json, math
+import sys, json, math
 from fractions import Fraction
 from pathlib import Path
 from constants import (
@@ -276,7 +276,10 @@ def generate_composition_report(data, output_path):
 
 def main():
     base = Path(__file__).parent
-    comp_file, comp_out = base / DEFAULT_INPUT, base / DEFAULT_OUTPUT
+
+    # Allow override via CLI args
+    comp_file = Path(sys.argv[1]) if len(sys.argv) > 1 else base / DEFAULT_INPUT
+    comp_out = Path(sys.argv[2]) if len(sys.argv) > 2 else base / DEFAULT_OUTPUT
 
     if not comp_file.exists():
         print(f"File not found: {comp_file}")
