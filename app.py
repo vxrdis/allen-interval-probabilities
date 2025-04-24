@@ -13,6 +13,9 @@ import plotly.io as pio
 import base64
 from io import BytesIO
 from fractions import Fraction
+import os
+import io
+import re
 
 # Import required functions and constants
 from simulations import arSimulate
@@ -562,6 +565,45 @@ app.layout = dbc.Container(
                                                     html.Small(
                                                         "Higher values give more precise fractions but may be harder to read",
                                                         className="text-muted d-block mb-2",
+                                                    ),
+                                                ]
+                                            ),
+                                        ],
+                                        className="mt-3 mb-3",
+                                    ),
+                                    dbc.Card(
+                                        [
+                                            dbc.CardHeader("Load Previous Results"),
+                                            dbc.CardBody(
+                                                [
+                                                    html.P(
+                                                        "Upload previously saved JSON results:"
+                                                    ),
+                                                    dcc.Upload(
+                                                        id="upload-json",
+                                                        children=html.Div(
+                                                            [
+                                                                "Drag and Drop or ",
+                                                                html.A("Select File"),
+                                                            ]
+                                                        ),
+                                                        style={
+                                                            "width": "100%",
+                                                            "height": "60px",
+                                                            "lineHeight": "60px",
+                                                            "borderWidth": "1px",
+                                                            "borderStyle": "dashed",
+                                                            "borderRadius": "5px",
+                                                            "textAlign": "center",
+                                                            "margin-bottom": "10px",
+                                                        },
+                                                        multiple=False,
+                                                        accept="application/json",
+                                                    ),
+                                                    html.Div(id="upload-json-status"),
+                                                    html.Small(
+                                                        "Files should be named sim_p[value]_q[value].json",
+                                                        className="text-muted d-block mt-2",
                                                     ),
                                                 ]
                                             ),
@@ -1172,6 +1214,47 @@ app.layout = dbc.Container(
                                         ],
                                         className="mt-3 mb-3",
                                     ),
+                                    dbc.Card(
+                                        [
+                                            dbc.CardHeader("Load Previous Results"),
+                                            dbc.CardBody(
+                                                [
+                                                    html.P(
+                                                        "Upload previously saved JSON results:"
+                                                    ),
+                                                    dcc.Upload(
+                                                        id="upload-comp-json",
+                                                        children=html.Div(
+                                                            [
+                                                                "Drag and Drop or ",
+                                                                html.A("Select File"),
+                                                            ]
+                                                        ),
+                                                        style={
+                                                            "width": "100%",
+                                                            "height": "60px",
+                                                            "lineHeight": "60px",
+                                                            "borderWidth": "1px",
+                                                            "borderStyle": "dashed",
+                                                            "borderRadius": "5px",
+                                                            "textAlign": "center",
+                                                            "margin-bottom": "10px",
+                                                        },
+                                                        multiple=False,
+                                                        accept="application/json",
+                                                    ),
+                                                    html.Div(
+                                                        id="upload-comp-json-status"
+                                                    ),
+                                                    html.Small(
+                                                        "Files should be named comp_p[value]_q[value].json",
+                                                        className="text-muted d-block mt-2",
+                                                    ),
+                                                ]
+                                            ),
+                                        ],
+                                        className="mt-3 mb-3",
+                                    ),
                                 ],
                                 md=4,
                                 id="composition-left-panel",
@@ -1446,6 +1529,47 @@ app.layout = dbc.Container(
                                         className="mt-3 mb-3",
                                     ),
                                     # Fraction denominator control is removed
+                                    dbc.Card(
+                                        [
+                                            dbc.CardHeader("Load Previous Results"),
+                                            dbc.CardBody(
+                                                [
+                                                    html.P(
+                                                        "Upload previously saved JSON results:"
+                                                    ),
+                                                    dcc.Upload(
+                                                        id="upload-matrix-json",
+                                                        children=html.Div(
+                                                            [
+                                                                "Drag and Drop or ",
+                                                                html.A("Select File"),
+                                                            ]
+                                                        ),
+                                                        style={
+                                                            "width": "100%",
+                                                            "height": "60px",
+                                                            "lineHeight": "60px",
+                                                            "borderWidth": "1px",
+                                                            "borderStyle": "dashed",
+                                                            "borderRadius": "5px",
+                                                            "textAlign": "center",
+                                                            "margin-bottom": "10px",
+                                                        },
+                                                        multiple=False,
+                                                        accept="application/json",
+                                                    ),
+                                                    html.Div(
+                                                        id="upload-matrix-json-status"
+                                                    ),
+                                                    html.Small(
+                                                        "Files should be named comp_p[value]_q[value].json",
+                                                        className="text-muted d-block mt-2",
+                                                    ),
+                                                ]
+                                            ),
+                                        ],
+                                        className="mt-3 mb-3",
+                                    ),
                                 ],
                                 md=4,
                                 id="matrix-left-panel",
@@ -1640,11 +1764,9 @@ def sync_born_inputs(slider_value, input_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if trigger_id == "p-born-slider":
-        # When slider changes, update both the input and the die slider
-        return dash.no_update, slider_value, slider_value
+        return slider_value, slider_value, dash.no_update
     else:
-        # When input changes, only update the born slider
-        return input_value, dash.no_update, dash.no_update
+        return input_value, input_value, dash.no_update
 
 
 @app.callback(
@@ -1660,11 +1782,9 @@ def sync_die_inputs(slider_value, input_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if trigger_id == "p-die-slider":
-        # When slider changes, update both the input and the born slider
-        return dash.no_update, slider_value, slider_value
+        return slider_value, slider_value, dash.no_update
     else:
-        # When input changes, only update the die slider
-        return input_value, dash.no_update, dash.no_update
+        return input_value, input_value, dash.no_update
 
 
 @app.callback(
@@ -4101,6 +4221,685 @@ def update_global_r3_distribution(data):
     )
 
     return fig
+
+
+@app.callback(
+    Output("simulation-results", "data", allow_duplicate=True),
+    Output("upload-json-status", "children"),
+    Output("p-born-input", "value", allow_duplicate=True),
+    Output("p-die-input", "value", allow_duplicate=True),
+    Output("trials-input", "value", allow_duplicate=True),
+    Input("upload-json", "contents"),
+    State("upload-json", "filename"),
+    prevent_initial_call=True,
+)
+def process_uploaded_json(contents, filename):
+    """Process uploaded JSON file and update app state for simulation tab"""
+    if contents is None:
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+    try:
+        # Decode the base64 encoded file contents
+        content_type, content_string = contents.split(",")
+        decoded = base64.b64decode(content_string)
+        data = json.loads(decoded.decode("utf-8"))
+
+        # Check if this is a simulation file
+        is_sim_file = filename.startswith("sim_") or "results" in data
+
+        if not is_sim_file:
+            return (
+                dash.no_update,
+                dbc.Alert(
+                    f"File format not recognized as simulation data: {filename}. Expected filename format: sim_p[value]_q[value].json",
+                    color="warning",
+                    dismissable=True,
+                    duration=4000,
+                ),
+                dash.no_update,
+                dash.no_update,
+                dash.no_update,
+            )
+
+        # Extract parameters from filename or metadata
+        p_born = 0.5
+        p_die = 0.5
+        trials = 100000
+
+        # Try to extract from filename
+        match = re.search(r"p(\d+\.\d+)_q(\d+\.\d+)", filename)
+        if match:
+            p_born = float(match.group(1))
+            p_die = float(match.group(2))
+
+        # Handle the nested structure from sim_px_qy.json files
+        if "results" in data:
+            metadata = data.get("metadata", {})
+            p_born = metadata.get("pBorn", p_born)
+            p_die = metadata.get("pDie", p_die)
+            trials = metadata.get("trials", trials)
+            timestamp = metadata.get(
+                "timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+
+            # Get the first result
+            result_key = next(iter(data["results"]))
+            result = data["results"][result_key]
+
+            if isinstance(result, dict) and "counts" in result:
+                counts = result.get("counts", {})
+                trials = sum(counts.values()) if not trials else trials
+                stats = result.get("stats", {})
+
+                # Get summary stats directly from the file
+                summary = stats.get("summary", {})
+                mode_relation = summary.get("mode")
+
+                # Ensure we have JS divergences
+                js_comparisons = {}
+                for model, comp_data in stats.get("compare", {}).items():
+                    js_comparisons[model] = comp_data.get("js", 0)
+
+                # Find best fit model
+                best_fit = stats.get("best_fit", "N/A")
+                best_fit_js = min(js_comparisons.values()) if js_comparisons else 0
+
+                # Convert to our expected format with all required statistics
+                simulation_data = {
+                    "distribution": {k: v / trials for k, v in counts.items()},
+                    "raw_counts": counts,
+                    "parameters": {"p_born": p_born, "p_die": p_die, "trials": trials},
+                    "stats": {
+                        "mode": mode_relation,
+                        "mode_name": RELATION_NAMES.get(mode_relation, "Unknown"),
+                        "stddev": summary.get("stddev", 0),
+                        "entropy": summary.get("entropy", 0),
+                        "gini": summary.get("gini", 0),
+                        "coverage": summary.get("coverage", 0),
+                        "best_fit": best_fit,
+                        "best_fit_js": best_fit_js,
+                        "js_uniform": js_comparisons.get("Uniform", 0),
+                        "js_fv": js_comparisons.get("F-V", 0),
+                        "js_suliman": js_comparisons.get("Suliman", 0),
+                        "timestamp": timestamp,
+                    },
+                }
+
+                # Create success message
+                success_message = dbc.Alert(
+                    [
+                        html.P(f"Successfully loaded {filename}", className="mb-0"),
+                        html.Small(
+                            f"Parameters: p_born={p_born}, p_die={p_die}, trials={trials}"
+                        ),
+                    ],
+                    color="success",
+                    dismissable=True,
+                    duration=4000,
+                )
+
+                return simulation_data, success_message, p_born, p_die, trials
+
+        # If we couldn't process the file as a simulation
+        return (
+            dash.no_update,
+            dbc.Alert(
+                "File has an unrecognized format. Expected simulation data with 'results'.",
+                color="warning",
+                dismissable=True,
+                duration=4000,
+            ),
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+    except Exception as e:
+        error_message = dbc.Alert(
+            f"Error processing file: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=4000,
+        )
+        return (
+            dash.no_update,
+            error_message,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+
+# Add a new upload component for composition tab
+dbc.Card(
+    [
+        dbc.CardHeader("Load Previous Results"),
+        dbc.CardBody(
+            [
+                html.P("Upload previously saved JSON results:"),
+                dcc.Upload(
+                    id="upload-comp-json",
+                    children=html.Div(
+                        [
+                            "Drag and Drop or ",
+                            html.A("Select File"),
+                        ]
+                    ),
+                    style={
+                        "width": "100%",
+                        "height": "60px",
+                        "lineHeight": "60px",
+                        "borderWidth": "1px",
+                        "borderStyle": "dashed",
+                        "borderRadius": "5px",
+                        "textAlign": "center",
+                        "margin-bottom": "10px",
+                    },
+                    multiple=False,
+                    accept="application/json",
+                ),
+                html.Div(id="upload-comp-json-status"),
+                html.Small(
+                    "Files should be named comp_p[value]_q[value].json",
+                    className="text-muted d-block mt-2",
+                ),
+            ]
+        ),
+    ],
+    className="mt-3 mb-3",
+),
+
+# Add a new upload component for matrix tab
+dbc.Card(
+    [
+        dbc.CardHeader("Load Previous Results"),
+        dbc.CardBody(
+            [
+                html.P("Upload previously saved JSON results:"),
+                dcc.Upload(
+                    id="upload-matrix-json",
+                    children=html.Div(
+                        [
+                            "Drag and Drop or ",
+                            html.A("Select File"),
+                        ]
+                    ),
+                    style={
+                        "width": "100%",
+                        "height": "60px",
+                        "lineHeight": "60px",
+                        "borderWidth": "1px",
+                        "borderStyle": "dashed",
+                        "borderRadius": "5px",
+                        "textAlign": "center",
+                        "margin-bottom": "10px",
+                    },
+                    multiple=False,
+                    accept="application/json",
+                ),
+                html.Div(id="upload-matrix-json-status"),
+                html.Small(
+                    "Files should be named comp_p[value]_q[value].json",
+                    className="text-muted d-block mt-2",
+                ),
+            ]
+        ),
+    ],
+    className="mt-3 mb-3",
+),
+
+
+# Add a new upload component for matrix tab
+dbc.Card(
+    [
+        dbc.CardHeader("Load Previous Results"),
+        dbc.CardBody(
+            [
+                html.P("Upload previously saved JSON results:"),
+                dcc.Upload(
+                    id="upload-matrix-json",
+                    children=html.Div(
+                        [
+                            "Drag and Drop or ",
+                            html.A("Select File"),
+                        ]
+                    ),
+                    style={
+                        "width": "100%",
+                        "height": "60px",
+                        "lineHeight": "60px",
+                        "borderWidth": "1px",
+                        "borderStyle": "dashed",
+                        "borderRadius": "5px",
+                        "textAlign": "center",
+                        "margin-bottom": "10px",
+                    },
+                    multiple=False,
+                    accept="application/json",
+                ),
+                html.Div(id="upload-matrix-json-status"),
+                html.Small(
+                    "Files should be named comp_p[value]_q[value].json",
+                    className="text-muted d-block mt-2",
+                ),
+            ]
+        ),
+    ],
+    className="mt-3 mb-3",
+),
+
+
+# Add a callback for the composition tab JSON upload
+@app.callback(
+    Output("composition-results", "data", allow_duplicate=True),
+    Output("upload-comp-json-status", "children"),
+    Output("comp-p-born-input", "value", allow_duplicate=True),
+    Output("comp-p-die-input", "value", allow_duplicate=True),
+    Output("comp-trials-input", "value", allow_duplicate=True),
+    Output("relation1-dropdown", "value", allow_duplicate=True),
+    Output("relation2-dropdown", "value", allow_duplicate=True),
+    Input("upload-comp-json", "contents"),
+    State("upload-comp-json", "filename"),
+    prevent_initial_call=True,
+)
+def process_uploaded_comp_json(contents, filename):
+    """Process uploaded JSON file and update app state for composition tab"""
+    if contents is None:
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+    try:
+        # Decode the base64 encoded file contents
+        content_type, content_string = contents.split(",")
+        decoded = base64.b64decode(content_string)
+        data = json.loads(decoded.decode("utf-8"))
+
+        # Check if this is a composition file
+        is_comp_file = filename.startswith("comp_") or "compositions" in data
+
+        if not is_comp_file:
+            return (
+                dash.no_update,
+                dbc.Alert(
+                    f"File format not recognized as composition data: {filename}",
+                    color="warning",
+                    dismissable=True,
+                    duration=4000,
+                ),
+                dash.no_update,
+                dash.no_update,
+                dash.no_update,
+                dash.no_update,
+                dash.no_update,
+            )
+
+        # Extract p and q from filename using regex if available
+        p_born = 0.5
+        p_die = 0.5
+        match = re.search(r"p(\d+\.\d+)_q(\d+\.\d+)", filename)
+        if match:
+            p_born = float(match.group(1))
+            p_die = float(match.group(2))
+        else:
+            # Try to get from data
+            p_born = data.get("pBorn", 0.5)
+            p_die = data.get("pDie", 0.5)
+
+        trials = data.get("trials", 100000)
+
+        # Find a composition pair to display by default
+        r1 = ALLEN_RELATIONS[0]
+        r2 = ALLEN_RELATIONS[0]
+
+        if "compositions" in data:
+            # Find the first non-empty composition
+            for rel1 in data["compositions"]:
+                for rel2 in data["compositions"][rel1]:
+                    if data["compositions"][rel1][rel2]:
+                        r1 = rel1
+                        r2 = rel2
+                        break
+                if r1 != ALLEN_RELATIONS[0]:
+                    break
+
+            # Construct result for a specific composition
+            composition = data["compositions"].get(r1, {}).get(r2, {})
+            if composition:
+                # Calculate total count for this composition
+                total_count = sum(item["count"] for item in composition.values())
+
+                # Format as expected by our app
+                composition_data = {
+                    "r1": r1,
+                    "r2": r2,
+                    "r1_name": RELATION_NAMES.get(r1, "Unknown"),
+                    "r2_name": RELATION_NAMES.get(r2, "Unknown"),
+                    "parameters": {
+                        "p_born": p_born,
+                        "p_die": p_die,
+                        "trials": trials,
+                        "valid_count": data.get("valid_runs", trials),
+                    },
+                    "composition": {
+                        rel: {"count": comp["count"], "percentage": comp["percentage"]}
+                        for rel, comp in composition.items()
+                    },
+                    "total_count": total_count,
+                    # Store the full compositions data for browsing
+                    "all_compositions": data["compositions"],
+                }
+
+                # Create success message
+                success_message = dbc.Alert(
+                    [
+                        html.P(f"Successfully loaded {filename}", className="mb-0"),
+                        html.Small(
+                            f"Parameters: p_born={p_born}, p_die={p_die}, composition: {r1}•{r2}"
+                        ),
+                    ],
+                    color="success",
+                    dismissable=True,
+                    duration=4000,
+                )
+
+                return composition_data, success_message, p_born, p_die, trials, r1, r2
+
+        # If no valid composition found
+        return (
+            dash.no_update,
+            dbc.Alert(
+                "No valid composition data found in the file",
+                color="warning",
+                dismissable=True,
+                duration=4000,
+            ),
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+    except Exception as e:
+        error_message = dbc.Alert(
+            f"Error processing file: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=4000,
+        )
+        return (
+            dash.no_update,
+            error_message,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+
+# Add a callback for the matrix tab JSON upload
+@app.callback(
+    Output("matrix-results", "data", allow_duplicate=True),
+    Output("upload-matrix-json-status", "children"),
+    Output("matrix-p-born-input", "value", allow_duplicate=True),
+    Output("matrix-p-die-input", "value", allow_duplicate=True),
+    Output("matrix-trials-input", "value", allow_duplicate=True),
+    Input("upload-matrix-json", "contents"),
+    State("upload-matrix-json", "filename"),
+    prevent_initial_call=True,
+)
+def process_uploaded_matrix_json(contents, filename):
+    """Process uploaded JSON file and update app state for matrix tab"""
+    if contents is None:
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+    try:
+        # Decode the base64 encoded file contents
+        content_type, content_string = contents.split(",")
+        decoded = base64.b64decode(content_string)
+        data = json.loads(decoded.decode("utf-8"))
+
+        # Check if this is a matrix file OR a composition file (which can be converted)
+        is_matrix_file = filename.startswith("matrix_") or "matrix" in data
+        is_comp_file = filename.startswith("comp_") or "compositions" in data
+
+        if not is_matrix_file and not is_comp_file:
+            return (
+                dash.no_update,
+                dbc.Alert(
+                    f"File format not recognized. Expected matrix or composition data.",
+                    color="warning",
+                    dismissable=True,
+                    duration=4000,
+                ),
+                dash.no_update,
+                dash.no_update,
+                dash.no_update,
+            )
+
+        # Extract p and q from filename using regex if available
+        p_born = 0.5
+        p_die = 0.5
+        match = re.search(r"p(\d+\.\d+)_q(\d+\.\d+)", filename)
+        if match:
+            p_born = float(match.group(1))
+            p_die = float(match.group(2))
+        else:
+            # Try to get from data
+            p_born = data.get("pBorn", data.get("p_born", 0.5))
+            p_die = data.get("pDie", data.get("p_die", 0.5))
+
+        trials = data.get("trials", 100000)
+
+        # If we have composition data but not matrix data, convert it
+        if is_comp_file and "compositions" in data and not "matrix" in data:
+            # Create a matrix structure from composition data
+            matrix_data = {
+                "matrix": {},
+                "parameters": {"p_born": p_born, "p_die": p_die, "trials": trials},
+                "timestamp": data.get(
+                    "timestamp", datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                ),
+            }
+
+            # Convert the compositions data to matrix format
+            compositions = data.get("compositions", {})
+
+            # Initialize global stats for calculating distribution
+            global_counts = {}
+            total_compositions = 0
+
+            # Process each composition pair
+            for r1 in compositions:
+                if r1 not in matrix_data["matrix"]:
+                    matrix_data["matrix"][r1] = {}
+
+                for r2 in compositions[r1]:
+                    cell_data = {"composition": {}, "total": 0}
+                    r3_data = compositions[r1][r2]
+
+                    # Sum up the total counts for this cell
+                    cell_total = sum(item["count"] for item in r3_data.values())
+                    cell_data["total"] = cell_total
+                    total_compositions += cell_total
+
+                    # Process each resulting relation
+                    for r3, details in r3_data.items():
+                        cell_data["composition"][r3] = {
+                            "count": details["count"],
+                            "percentage": details["percentage"],
+                        }
+                        # Add to global counts
+                        if r3 not in global_counts:
+                            global_counts[r3] = 0
+                        global_counts[r3] += details["count"]
+
+                    matrix_data["matrix"][r1][r2] = cell_data
+
+            # Add global statistics
+            if total_compositions > 0:
+                distribution = {
+                    r: count / total_compositions for r, count in global_counts.items()
+                }
+                matrix_data["global_stats"] = {
+                    "distribution": distribution,
+                    "raw_counts": global_counts,
+                    "entropy": entropy(list(distribution.values())),
+                    "gini": gini_coefficient(list(distribution.values())),
+                    # Other metrics could be added here
+                }
+
+            data = matrix_data
+
+        # Create success message
+        success_message = dbc.Alert(
+            [
+                html.P(f"Successfully loaded {filename}", className="mb-0"),
+                html.Small(
+                    f"Parameters: p_born={p_born}, p_die={p_die}, trials={trials}"
+                ),
+            ],
+            color="success",
+            dismissable=True,
+            duration=4000,
+        )
+
+        return data, success_message, p_born, p_die, trials
+
+    except Exception as e:
+        error_message = dbc.Alert(
+            f"Error processing file: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=4000,
+        )
+        return (
+            dash.no_update,
+            error_message,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
+
+# Update the existing upload component in Simulation tab to include help text
+dbc.Card(
+    [
+        dbc.CardHeader("Load Previous Results"),
+        dbc.CardBody(
+            [
+                html.P("Upload previously saved JSON results:"),
+                dcc.Upload(
+                    id="upload-json",
+                    children=html.Div(
+                        [
+                            "Drag and Drop or ",
+                            html.A("Select File"),
+                        ]
+                    ),
+                    style={
+                        "width": "100%",
+                        "height": "60px",
+                        "lineHeight": "60px",
+                        "borderWidth": "1px",
+                        "borderStyle": "dashed",
+                        "borderRadius": "5px",
+                        "textAlign": "center",
+                        "margin-bottom": "10px",
+                    },
+                    multiple=False,
+                    accept="application/json",
+                ),
+                html.Div(id="upload-json-status"),
+                html.Small(
+                    "Files should be named sim_p[value]_q[value].json",
+                    className="text-muted d-block mt-2",
+                ),
+            ]
+        ),
+    ],
+    className="mt-3 mb-3",
+),
+
+
+# Add a callback to update matrix visualization from loaded data
+@app.callback(
+    Output("matrix-status", "children", allow_duplicate=True),
+    Output("matrix-global-stats", "children", allow_duplicate=True),
+    Input("matrix-results", "data"),
+    prevent_initial_call=True,
+)
+def update_matrix_status_from_upload(data):
+    """Update the matrix status when data is loaded from a file"""
+    if not data or not isinstance(data, dict):
+        return dash.no_update, dash.no_update
+
+    # Create a status card showing the data has been loaded
+    status = html.Div(
+        [
+            dbc.Alert(
+                [
+                    html.H6("Matrix data loaded from file", className="alert-heading"),
+                    html.Div(
+                        [
+                            html.P(
+                                [
+                                    html.Strong("Generated: "),
+                                    data.get("timestamp", "Unknown"),
+                                ],
+                                className="mb-1",
+                            ),
+                            html.P(
+                                [
+                                    html.Strong("Birth Probability (p): "),
+                                    f"{data.get('parameters', {}).get('p_born', 0.5)}",
+                                ],
+                                className="mb-1",
+                            ),
+                            html.P(
+                                [
+                                    html.Strong("Death Probability (q): "),
+                                    f"{data.get('parameters', {}).get('p_die', 0.5)}",
+                                ],
+                                className="mb-1",
+                            ),
+                        ]
+                    ),
+                ],
+                color="info",
+                className="mt-3",
+            )
+        ]
+    )
+
+    # Update global stats if available
+    if "global_stats" in data:
+        global_stats = update_matrix_global_stats(data)
+        return status, global_stats
+
+    # Return placeholder if no global stats
+    placeholder_stats = html.Div("Global statistics not available in the loaded file")
+    return status, placeholder_stats
 
 
 app.index_string = """
