@@ -4445,7 +4445,7 @@ dbc.Card(
                 ),
                 html.Div(id="upload-matrix-json-status"),
                 html.Small(
-                    "Files should be named comp_p[value]_q[value].json",
+                    "Files should be named matrix_p[value]_q[value].json",
                     className="text-muted d-block mt-2",
                 ),
             ]
@@ -4735,16 +4735,21 @@ def process_uploaded_matrix_json(contents, filename):
                     matrix_data["matrix"][r1] = {}
 
                 for r2 in compositions[r1]:
+                    comp_data = compositions[r1][r2]
+
+                    # Skip "unobserved" compositions
+                    if comp_data == "unobserved":
+                        continue
+
                     cell_data = {"composition": {}, "total": 0}
-                    r3_data = compositions[r1][r2]
 
                     # Sum up the total counts for this cell
-                    cell_total = sum(item["count"] for item in r3_data.values())
+                    cell_total = sum(item["count"] for item in comp_data.values())
                     cell_data["total"] = cell_total
                     total_compositions += cell_total
 
                     # Process each resulting relation
-                    for r3, details in r3_data.items():
+                    for r3, details in comp_data.items():
                         cell_data["composition"][r3] = {
                             "count": details["count"],
                             "percentage": details["percentage"],
@@ -4758,23 +4763,87 @@ def process_uploaded_matrix_json(contents, filename):
 
             # Add global statistics
             if total_compositions > 0:
+                # Create distribution dictionary
                 distribution = {
                     r: count / total_compositions for r, count in global_counts.items()
                 }
+
+                # Calculate entropy and gini for the global distribution
+                dist_values = list(distribution.values())
                 matrix_data["global_stats"] = {
                     "distribution": distribution,
                     "raw_counts": global_counts,
-                    "entropy": entropy(list(distribution.values())),
-                    "gini": gini_coefficient(list(distribution.values())),
-                    # Other metrics could be added here
+                    "entropy": entropy(dist_values),
+                    "gini": gini(distribution),
+                    # Calculate JS divergences
+                    "js_uniform": js_divergence(distribution, UNIFORM_DISTRIBUTION),
+                    "js_fv": js_divergence(distribution, FERNANDO_VOGEL_DISTRIBUTION),
+                    "js_suliman": js_divergence(distribution, SULIMAN_DISTRIBUTION),
                 }
 
-            data = matrix_data
+                # Determine best fit model
+                js_uniform = matrix_data["global_stats"]["js_uniform"]
+                js_fv = matrix_data["global_stats"]["js_fv"]
+                js_suliman = matrix_data["global_stats"]["js_suliman"]
+                min_js = min(js_uniform, js_fv, js_suliman)
 
-        # Create success message
+                if min_js == js_uniform:
+                    best_fit = "Uniform"
+                    best_fit_js = js_uniform
+                elif min_js == js_fv:
+                    best_fit = "Fernando-Vogel"
+                    best_fit_js = js_fv
+                else:
+                    best_fit = "Suliman"
+                    best_fit_js = js_suliman
+
+                matrix_data["global_stats"]["best_fit"] = best_fit
+                matrix_data["global_stats"]["best_fit_js"] = best_fit_js
+
+                # Mode (most common relation)
+                if distribution:
+                    mode_relation = max(distribution.items(), key=lambda x: x[1])[0]
+                    matrix_data["global_stats"]["mode"] = mode_relation
+                    matrix_data["global_stats"]["mode_name"] = RELATION_NAMES.get(
+                        mode_relation, "Unknown"
+                    )
+
+            data = matrix_data
+        elif "global_stats" in data:
+            # Handle the case where distribution might be stored in different formats
+            if "distribution" in data["global_stats"]:
+                dist = data["global_stats"]["distribution"]
+
+                # If distribution is a list, convert it to dictionary using ALLEN_RELATIONS as keys
+                if isinstance(dist, list):
+                    if len(dist) == len(ALLEN_RELATIONS):
+                        # Create a dictionary using ALLEN_RELATIONS as keys
+                        distribution_dict = {
+                            rel: prob for rel, prob in zip(ALLEN_RELATIONS, dist)
+                        }
+                    else:
+                        # If lengths don't match, use numbered keys
+                        distribution_dict = {
+                            str(i): prob for i, prob in enumerate(dist)
+                        }
+
+                    # Replace the list with the dictionary
+                    data["global_stats"]["distribution"] = distribution_dict
+
+                    # Recalculate entropy and gini with the dictionary values
+                    data["global_stats"]["entropy"] = entropy(
+                        list(distribution_dict.values())
+                    )
+                    data["global_stats"]["gini"] = gini(distribution_dict)
+
+        # Create success message with details about the loaded data
+        file_type = "matrix" if is_matrix_file else "composition"
         success_message = dbc.Alert(
             [
-                html.P(f"Successfully loaded {filename}", className="mb-0"),
+                html.P(
+                    f"Successfully loaded {file_type} data from {filename}",
+                    className="mb-0",
+                ),
                 html.Small(
                     f"Parameters: p_born={p_born}, p_die={p_die}, trials={trials}"
                 ),
@@ -4791,7 +4860,7 @@ def process_uploaded_matrix_json(contents, filename):
             f"Error processing file: {str(e)}",
             color="danger",
             dismissable=True,
-            duration=4000,
+            duration=6000,
         )
         return (
             dash.no_update,
